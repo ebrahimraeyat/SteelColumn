@@ -2,6 +2,7 @@ import csv
 import FreeCAD
 import Part
 import Arch
+import Draft
 from FreeCAD import Base
 from section import make_section, create_ipe, create_plate
 from columnTypeFunctions import decompose_section_name
@@ -93,7 +94,7 @@ class ColumnType:
                 "App::PropertyFloat",
                 "v_scale",
                 "column_type",
-                ).v_scale = .5
+                ).v_scale = 1
 
     def execute(self, obj):
         scale = 1000 * obj.v_scale
@@ -113,57 +114,45 @@ class ColumnType:
         print(simplify_sections_name)
         print(simplify_levels)
 
-        flang_plate, web_plate = decompose_section_name(simplify_sections_name[0])
         merge_flang_plates = []
-        merge_flang_levels = []
+        merge_flang_levels = [simplify_levels[0]]
         merge_web_plates = []
-        merge_web_levels = []
+        merge_web_levels = [simplify_levels[0]]
 
-        extend_button_flang_length = 0
-        extend_button_web_length = 0
         for i, name in enumerate(simplify_sections_name):
             flang_plate, web_plate = decompose_section_name(name)
             if flang_plate:
-                level_i = simplify_levels[i] + extend_button_flang_length
-                level_j = simplify_levels[i + 1]
-                if merge_flang_plates:
-                    if flang_plate != merge_flang_plates[-1]:
-                        merge_flang_plates.append(flang_plate)
-                        # if simplify_levels[i] != merge_flang_levels[-1][1]:
-                        merge_flang_levels.append([level_i, level_j])
-                    else:
-                        merge_flang_levels[-1].pop()
-                        merge_flang_levels[-1].append(level_j)
-                else:
-                    merge_flang_plates.append(flang_plate)
-                    merge_flang_levels.append([level_i, level_j])
                 extend_button_flang_length = 0
-                    
             else:
                 extend_button_flang_length = -2 * obj.extend_length * scale
-                merge_flang_plates.append([])
-                
+
+            level = simplify_levels[i + 1] + extend_button_flang_length
+            if merge_flang_plates:
+                if flang_plate != merge_flang_plates[-1]:
+                    merge_flang_plates.append(flang_plate)
+                    merge_flang_levels.append(level)
+                else:
+                    merge_flang_levels[-1] = level
+            else:
+                merge_flang_plates.append(flang_plate)
+                merge_flang_levels.append(level)
+            
 
             if web_plate:
-                level_i = simplify_levels[i] + extend_button_web_length
-                level_j = simplify_levels[i + 1]
-                if merge_web_plates:
-                    if web_plate != merge_web_plates[-1]:
-                        merge_web_plates.append(web_plate)
-                        # if simplify_levels[i] != merge_web_levels[-1][1]:
-                        merge_web_levels.append([level_i, level_j])
-                    else:
-                        merge_web_levels[-1].pop()
-                        merge_web_levels[-1].append(level_j)
-                else:
-                    merge_web_plates.append(web_plate)
-                    merge_web_levels.append([level_i, level_j])
                 extend_button_web_length = 0
-                    
             else:
                 extend_button_web_length = -2 * obj.extend_length * scale
-                merge_web_plates.append([])
 
+            level = simplify_levels[i + 1] + extend_button_web_length
+            if merge_web_plates:
+                if web_plate != merge_web_plates[-1]:
+                    merge_web_plates.append(web_plate)
+                    merge_web_levels.append(level)
+                else:
+                    merge_web_levels[-1] = level
+            else:
+                merge_web_plates.append(web_plate)
+                merge_web_levels.append(level)
 
         print(merge_flang_plates)
         print(merge_flang_levels)
@@ -171,63 +160,6 @@ class ColumnType:
         print(merge_web_levels)                    
         ipe_shapes, bf, d, tf, tw = self.make_profile(obj)
         ipe = ipe_shapes[0]
-        flang_plate_names = []
-        i = 0
-        for plate in merge_flang_plates:
-            if plate:
-                width = plate[0]
-                height = plate[1]
-                y = (d + height) / 2
-                plt = create_plate(width, height)
-                plt.Placement.Base = FreeCAD.Vector(0, y, merge_flang_levels[i][0]) + obj.Placement.Base
-                plb = plt.copy()
-                plb.Placement.Base = FreeCAD.Vector(0, -y, merge_flang_levels[i][0]) + obj.Placement.Base
-                palte_obj = FreeCAD.ActiveDocument.addObject("Part::FeaturePython", "Flang_Plate")
-                palte_obj.Shape = Part.makeCompound([plt, plb])
-                PLATE = Arch.makeStructure(palte_obj)
-                h = merge_flang_levels[i][1] - merge_flang_levels[i][0]
-                PLATE.Height = h
-                PLATE.ViewObject.ShapeColor = (0.0, 0.0, 1.0)
-                flang_plate_names.append(PLATE.Name)
-                i += 1
-            # else:
-            #     if i == 0:
-            #         level_i = (obj.base_level + 1000 ) * scale# constant
-            #     else:
-            #         level_i = merge_flang_levels[i][1]
-            #         level_j = merge_flang_levels[i][0]
-            #     h = level_j - level_i
-            #     height = 8
-            #     y = (d + height) / 2
-            #     plt = create_plate(200, height)
-            #     plt1 = plt.copy()
-            #     plt1.Placement.Base = FreeCAD.Vector(0, y, level_i) + obj.Placement.Base
-            #     plt1_obj = FreeCAD.ActiveDocument.addObject("Part::FeaturePython", "Flang_Plate")
-            #     plt1_obj.Shape = plt1
-            #     space = 400 * scale # constant
-            #     n_z = int(h / space)
-            #     _obj_ = Draft.make_ortho_array(plt1_obj, v_z=FreeCAD.Vector(0.0, 0.0, space), n_x=1, n_y=1, n_z=n_z)
-
-        web_plate_names = []
-        i = 0
-        for plate in merge_web_plates:
-            if plate:
-                width = plate[0]
-                height = plate[1]
-                x = ipe.Placement.Base.x + (tw + height) / 2
-                plwr = create_plate(height, width)
-                plwr.Placement.Base = FreeCAD.Vector(x, 0, merge_web_levels[i][0]) + obj.Placement.Base
-                plwl = plwr.copy()
-                plwl.Placement.Base = FreeCAD.Vector(-x, 0, merge_web_levels[i][0]) + obj.Placement.Base
-                palte_obj = FreeCAD.ActiveDocument.addObject("Part::FeaturePython", "web_Plate")
-                palte_obj.Shape = Part.makeCompound([plwr, plwl])
-                PLATE = Arch.makeStructure(palte_obj)
-                h = merge_web_levels[i][1] - merge_web_levels[i][0]
-                PLATE.Height = h
-                PLATE.ViewObject.ShapeColor = (0.0, 1.0, 0.0)
-                web_plate_names.append(PLATE.Name)
-                i += 1
-
         ipe_section_obj = FreeCAD.ActiveDocument.addObject("Part::FeaturePython", "ipe_section")
         ipe_section_obj.Shape = Part.makeCompound(ipe_shapes)
         IPE = Arch.makeStructure(ipe_section_obj)
@@ -235,6 +167,80 @@ class ColumnType:
         IPE.Height = h
         IPE.Placement.Base = FreeCAD.Vector(0, 0, simplify_levels[0]) + obj.Placement.Base
         IPE.ViewObject.ShapeColor = (1.0, 0.0, 0.0)
+
+        flang_plate_names = []
+        for i, plate in enumerate(merge_flang_plates):
+            if plate:
+                width = plate[0]
+                height = plate[1]
+                y = (d + height) / 2
+                plt = create_plate(width, height)
+                plt.Placement.Base = FreeCAD.Vector(0, y, merge_flang_levels[i]) + obj.Placement.Base
+                plb = plt.copy()
+                plb.Placement.Base = FreeCAD.Vector(0, -y, merge_flang_levels[i]) + obj.Placement.Base
+                palte_obj = FreeCAD.ActiveDocument.addObject("Part::FeaturePython", "Flang_Plate")
+                palte_obj.Shape = Part.makeCompound([plt, plb])
+                PLATE = Arch.makeStructure(palte_obj)
+                h = merge_flang_levels[i + 1] - merge_flang_levels[i]
+                PLATE.Height = h
+                PLATE.ViewObject.ShapeColor = (0.0, 0.0, 1.0)
+                flang_plate_names.append(PLATE.Name)
+            else:
+                if obj.pa_baz:
+                    bb = ipe_section_obj.Shape.BoundBox
+                    width = bb.XLength - bf / 2
+                    height = 5
+                    y = (d + height) / 2
+                    if i == 0:
+                        level_i = merge_flang_levels[i] + 1.1 * scale# constant
+                        connection_ipe_section = ipe.copy()
+                        connection_ipe_section.Placement.Base = IPE.Placement.Base
+                        connection_ipe_section_obj = FreeCAD.ActiveDocument.addObject("Part::FeaturePython", "ipe")
+                        connection_ipe_section_obj.Shape = connection_ipe_section
+                        connection_ipe_obj = Arch.makeStructure(connection_ipe_section_obj)
+                        connection_ipe_obj.Height = 1 * scale
+                        connection_ipe_obj.ViewObject.ShapeColor = (.80, 0.0, 0.0)
+
+
+                    else:
+                        level_i = merge_flang_levels[i] + .1 * scale
+                    level_j = merge_flang_levels[i + 1]
+                    h = level_j - level_i
+                    space = .4 * scale # constant
+                    n_z = int(h / space)
+                    print(f"level_i = {level_i}, h = {h}, n_z = {n_z}")
+                    plt = create_plate(width, height)
+                    plt.Placement.Base = FreeCAD.Vector(0, y, level_i) + obj.Placement.Base
+                    plb = plt.copy()
+                    plb.Placement.Base = FreeCAD.Vector(0, -y, level_i) + obj.Placement.Base
+                    palte_obj = FreeCAD.ActiveDocument.addObject("Part::FeaturePython", "Flang_Plate")
+                    palte_obj.Shape = Part.makeCompound([plt, plb])
+                    PLATE = Arch.makeStructure(palte_obj)
+                    PLATE.Height = .15 * scale
+                    PLATE.ViewObject.ShapeColor = (0.0, 0.0, 1.0)
+                    _obj_ = Draft.make_ortho_array(PLATE, v_z=FreeCAD.Vector(0.0, 0.0, space), n_x=1, n_y=1, n_z=n_z)
+                    flang_plate_names.append(_obj_.Name)
+
+                
+
+        web_plate_names = []
+        for i, plate in enumerate(merge_web_plates):
+            if plate:
+                width = plate[0]
+                height = plate[1]
+                x = ipe.Placement.Base.x + (tw + height) / 2
+                plwr = create_plate(height, width)
+                plwr.Placement.Base = FreeCAD.Vector(x, 0, merge_web_levels[i]) + obj.Placement.Base
+                plwl = plwr.copy()
+                plwl.Placement.Base = FreeCAD.Vector(-x, 0, merge_web_levels[i]) + obj.Placement.Base
+                palte_obj = FreeCAD.ActiveDocument.addObject("Part::FeaturePython", "web_Plate")
+                palte_obj.Shape = Part.makeCompound([plwr, plwl])
+                PLATE = Arch.makeStructure(palte_obj)
+                h = merge_web_levels[i + 1] - merge_web_levels[i]
+                PLATE.Height = h
+                PLATE.ViewObject.ShapeColor = (0.0, 1.0, 0.0)
+                web_plate_names.append(PLATE.Name)
+
         h = .02 * scale
         length = 700
         base_plate = Arch.makeStructure(length=length, width=length, height= h, name='BasePlate')
