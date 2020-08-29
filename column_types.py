@@ -54,6 +54,13 @@ class ColumnTypes:
 				"column_types",
 				)
 
+		if not hasattr(obj, "composite_deck"):
+			obj.addProperty(
+				"App::PropertyBool",
+				"composite_deck",
+				"Deck",
+				).composite_deck = True
+
         # if not 
 
 	def execute(self, obj):
@@ -101,12 +108,15 @@ class ColumnTypes:
 				FreeCAD.ActiveDocument.removeObject(children.Base.Name)
 			FreeCAD.ActiveDocument.removeObject(name)
 		for o in FreeCAD.ActiveDocument.Objects:
-			if hasattr(o.Proxy, "Type") and o.Proxy.Type == "ColumnTypes":
-				continue
-			elif hasattr(o, "v_scale") and o.v_scale != obj.v_scale:
-					o.v_scale = obj.v_scale
-			elif hasattr(o, "base_level") and o.base_level != obj.base_level:
-					o.base_level = obj.base_level
+			if hasattr(o, "Proxy"):
+				if hasattr(o.Proxy, "Type") and o.Proxy.Type == "ColumnTypes":
+					continue
+			if hasattr(o, "v_scale") and o.v_scale != obj.v_scale:
+				o.v_scale = obj.v_scale
+			if hasattr(o, "base_level") and o.base_level != obj.base_level:
+				o.base_level = obj.base_level
+			if hasattr(o, "composite_deck") and o.composite_deck != obj.composite_deck:
+				o.composite_deck = obj.composite_deck
 
 
 	def get_level_text(self, level):

@@ -1,4 +1,6 @@
 
+import FreeCAD
+
 
 def decompose_section_name(name):
     '''
@@ -29,3 +31,9 @@ def decompose_section_name(name):
 
     return(flang_plate_dim, web_plate_dim)
 
+
+def remove_obj(name):
+    o = FreeCAD.ActiveDocument.getObject(name)
+    if hasattr(o, "Base") and o.Base:
+        remove_obj(o.Base.Name)
+    FreeCAD.ActiveDocument.removeObject(name)
