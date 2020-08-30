@@ -218,6 +218,7 @@ class ColumnType:
                         new_instances = set(document.findObjects()) - current_instances
                         o = new_instances.pop()
                         o.Placement.Base = FreeCAD.Vector(0, y, z) + obj.Placement.Base
+                        o.ViewObject.ShapeColor = (1.0, 1.0, 0.0)
                         neshiman_obj_names.append(o.Name)
                         neshiman_levels.append(lev)
 
@@ -272,6 +273,7 @@ class ColumnType:
                 new_instances = set(document.findObjects()) - current_instances
                 o = new_instances.pop()
                 o.Placement.Base = FreeCAD.Vector(0, y, z) + obj.Placement.Base
+                o.ViewObject.ShapeColor = (1.0, 1.0, 0.0)
                 neshiman_obj_names.append(o.Name)
                 neshiman_levels.append(lev)
 
