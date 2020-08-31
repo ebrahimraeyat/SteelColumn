@@ -5,7 +5,7 @@ import Arch
 import Draft
 from FreeCAD import Base
 from section import make_section, create_ipe, create_plate
-from columnTypeFunctions import decompose_section_name, remove_obj
+from columnTypeFunctions import decompose_section_name, remove_obj, find_minimum_z_name
 from os.path import join, dirname, abspath
 
 class ColumnType:
@@ -102,7 +102,6 @@ class ColumnType:
                 "composite_deck",
                 "Deck",
                 ).composite_deck = True
-        # obj.setEditorMode("composite_deck", 1)
 
 
     def execute(self, obj):
@@ -130,7 +129,7 @@ class ColumnType:
 
         for i, name in enumerate(simplify_sections_name):
             flang_plate, web_plate = decompose_section_name(name)
-            if flang_plate:
+            if flang_plate or (i == len(simplify_sections_name) - 1):
                 extend_button_flang_length = 0
             else:
                 extend_button_flang_length = -2 * obj.extend_length * scale
@@ -163,10 +162,6 @@ class ColumnType:
                 merge_web_plates.append(web_plate)
                 merge_web_levels.append(level)
 
-        # print(merge_flang_plates)
-        # print(merge_flang_levels)
-        # print(merge_web_plates)
-        # print(merge_web_levels) 
         if obj.composite_deck:
             neshiman_base_z = 0
         else:
@@ -219,6 +214,7 @@ class ColumnType:
                         o = new_instances.pop()
                         o.Placement.Base = FreeCAD.Vector(0, y, z) + obj.Placement.Base
                         o.ViewObject.ShapeColor = (1.0, 1.0, 0.0)
+                        Draft.scale(o, FreeCAD.Vector(1, 1, obj.v_scale), copy=False)
                         neshiman_obj_names.append(o.Name)
                         neshiman_levels.append(lev)
 
@@ -229,9 +225,9 @@ class ColumnType:
                     width = bb.XLength - bf / 2
                     height = 5
                     y = (d + height) / 2
+                    connection_ipe_section = ipe.copy()
                     if i == 0:
                         level_i = merge_flang_levels[i] + 1.1 * scale# constant
-                        connection_ipe_section = ipe.copy()
                         connection_ipe_section.Placement.Base = IPE.Placement.Base
                         connection_ipe_section_obj = FreeCAD.ActiveDocument.addObject("Part::FeaturePython", "ipe")
                         connection_ipe_section_obj.Shape = connection_ipe_section
@@ -239,19 +235,39 @@ class ColumnType:
                         connection_ipe_obj.Height = 1 * scale
                         connection_ipe_obj.ViewObject.ShapeColor = (.80, 0.0, 0.0)
                         connection_ipes.append(connection_ipe_obj.Name)
-
-
                     else:
                         level_i = merge_flang_levels[i] + .1 * scale
+
+
                     level_j = merge_flang_levels[i + 1]
-                    h = level_j - level_i
+                    for lev in levels[1:]:
+                        if level_i < lev * scale < level_j:
+                            connection_ipe_section.Placement.Base = IPE.Placement.Base
+                            connection_ipe_section.Placement.Base.z = (lev - .5) * scale
+                            connection_ipe_section_obj = FreeCAD.ActiveDocument.addObject("Part::FeaturePython", "ipe")
+                            connection_ipe_section_obj.Shape = connection_ipe_section
+                            connection_ipe_obj = Arch.makeStructure(connection_ipe_section_obj)
+                            connection_ipe_obj.Height = 1 * scale
+                            connection_ipe_obj.ViewObject.ShapeColor = (.80, 0.0, 0.0)
+                            connection_ipes.append(connection_ipe_obj.Name)
+
+        # draw plate for pa_baz column (nardebani)
+        if obj.pa_baz:
+            flangs_and_ipes = connection_ipes + flang_plate_names
+            flangs_and_ipes = sorted(flangs_and_ipes, key=lambda name: FreeCAD.ActiveDocument.getObject(name).Base.Shape.BoundBox.ZMin)
+            for i in range(len(flangs_and_ipes) - 1):
+                o1 = FreeCAD.ActiveDocument.getObject(flangs_and_ipes[i])
+                o2 = FreeCAD.ActiveDocument.getObject(flangs_and_ipes[i + 1])
+                z1 = o1.Base.Shape.BoundBox.ZMax + o1.Height.Value + .2 * scale
+                z2 = o2.Base.Shape.BoundBox.ZMin
+                h = z2 - z1
+                if h > 0:
                     space = .4 * scale # constant
                     n_z = int(h / space)
-                    print(f"level_i = {level_i}, h = {h}, n_z = {n_z}")
                     plt = create_plate(width, height)
-                    plt.Placement.Base = FreeCAD.Vector(0, y, level_i) + obj.Placement.Base
+                    plt.Placement.Base = FreeCAD.Vector(0, y, z1) + obj.Placement.Base
                     plb = plt.copy()
-                    plb.Placement.Base = FreeCAD.Vector(0, -y, level_i) + obj.Placement.Base
+                    plb.Placement.Base = FreeCAD.Vector(0, -y, z1) + obj.Placement.Base
                     palte_obj = FreeCAD.ActiveDocument.addObject("Part::FeaturePython", "Flang_Plate")
                     palte_obj.Shape = Part.makeCompound([plt, plb])
                     PLATE = Arch.makeStructure(palte_obj)
@@ -274,6 +290,7 @@ class ColumnType:
                 o = new_instances.pop()
                 o.Placement.Base = FreeCAD.Vector(0, y, z) + obj.Placement.Base
                 o.ViewObject.ShapeColor = (1.0, 1.0, 0.0)
+                Draft.scale(o, FreeCAD.Vector(1, 1, obj.v_scale), copy=False)
                 neshiman_obj_names.append(o.Name)
                 neshiman_levels.append(lev)
 
@@ -310,28 +327,6 @@ class ColumnType:
         obj.childrens_name = childrens_name
         for name in old_childrens_name:
             remove_obj(name)
-            # children = FreeCAD.ActiveDocument.getObject(name)
-            # if hasattr(children, "Base") and children.Base:
-            #     FreeCAD.ActiveDocument.removeObject(children.Base.Name)
-            # FreeCAD.ActiveDocument.removeObject(name)
-        # for i, level in enumerate(simplify_levels[:-1]):
-        #     section = make_section(simplify_sections_name[i], 0, level=level)
-        #     h = simplify_levels[i + 1] - simplify_levels[i]
-
-        #     column = Arch.makeStructure(section)
-        #     column.Height = h
-        #     column.Placement.Base = obj.Placement.Base
-        #     columns_name.append(column.Name)
-        #     # shapes.append(column.Shape.copy())
-
-        # old_sections_name = obj.sections_name
-        # old_columns_name = obj.columns_name
-        # obj.columns_name = columns_name
-        # for name in old_columns_name:
-        #     column = FreeCAD.ActiveDocument.getObject(name)
-        #     FreeCAD.ActiveDocument.removeObject(column.Base.Name)
-        #     FreeCAD.ActiveDocument.removeObject(name)
-        # obj.Shape = Part.makeCompound(shapes)
         obj.childrens_name = childrens_name
 
     
@@ -452,5 +447,6 @@ if __name__ == '__main__':
     make_column_type([4, 3.2, 3.2, 3.2, 3.3, 5], ['w200x5', 'PL250x8w200x5', 'PL200x8','PL200x8', 'w150x5', 'w150x5'], base_level=-1.2, pos=(4000, 4000), size="24", pa_baz=True)
     make_column_type([4, 3.2, 3.2, 3.2, 3.3, 5], ['', '', '', '', '', ''], base_level=-1.2, pos=(0, 4000), size="14", pa_baz=True)
     make_column_type([4, 3.2, 3.2, 3.2, 3.3, 5, 3, 3], ['PL310x10w140x8', 'PL310x10', 'PL310x8', 'PL230x8', 'PL230x6', '', '', ''], base_level=-1.2, pos=(8000, 0), n =3, size="18", pa_baz=False)
+    make_column_type([4, 3.2, 3.2, 3.2, 3.3, 5, 3, 3], ['PL310x10w140x8', 'PL310x10', 'PL310x8', 'PL230x8', 'PL230x6', 'PL230x6', 'PL230x6', 'PL230x6w140x8'], base_level=-1.2, pos=(8000, 4000), n=2, size="18", pa_baz=True)
 
 
