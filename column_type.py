@@ -5,7 +5,8 @@ import Arch
 import Draft
 from FreeCAD import Base
 from section import make_section, create_ipe, create_plate
-from columnTypeFunctions import decompose_section_name, remove_obj, find_minimum_z_name
+from columnTypeFunctions import (decompose_section_name, remove_obj,
+                                find_empty_levels, find_nardebani_plate_levels)
 from os.path import join, dirname, abspath
 
 class ColumnType:
@@ -16,13 +17,13 @@ class ColumnType:
     def set_properties(self, obj):
         self.Type = "ColumnType"
 
-        if not hasattr(obj, "n"):
-            obj.addProperty(
-                "App::PropertyEnumeration",
-                "n",
-                "IPE",
-                )
-            obj.n = ['2', '3']
+        # if not hasattr(obj, "n"):
+        #     obj.addProperty(
+        #         "App::PropertyEnumeration",
+        #         "n",
+        #         "IPE",
+        #         )
+        #     obj.n = ['2', '3']
 
         if not hasattr(obj, "size"):
             obj.addProperty(
@@ -94,7 +95,7 @@ class ColumnType:
                 "App::PropertyFloat",
                 "v_scale",
                 "column_type",
-                ).v_scale = 1
+                ).v_scale = .5
 
         if not hasattr(obj, "composite_deck"):
             obj.addProperty(
@@ -119,16 +120,16 @@ class ColumnType:
                 simplify_levels.append((levels[i] + obj.extend_length) * scale)
         simplify_levels.append((levels[-1] + obj.extend_length) * scale)
 
-        print(simplify_sections_name)
-        print(simplify_levels)
 
         merge_flang_plates = []
         merge_flang_levels = [simplify_levels[0]]
         merge_web_plates = []
         merge_web_levels = [simplify_levels[0]]
+        souble_ipes = []
+        souble_ipe_levels = [simplify_levels[0]]
 
         for i, name in enumerate(simplify_sections_name):
-            flang_plate, web_plate = decompose_section_name(name)
+            n, _, flang_plate, web_plate = decompose_section_name(name)
             if flang_plate or (i == len(simplify_sections_name) - 1):
                 extend_button_flang_length = 0
             else:
@@ -162,25 +163,57 @@ class ColumnType:
                 merge_web_plates.append(web_plate)
                 merge_web_levels.append(level)
 
-        if obj.composite_deck:
-            neshiman_base_z = 0
-        else:
-            neshiman_base_z = 100 * obj.v_scale
+            
+            if n == 3 or (i == len(simplify_sections_name) - 1):
+                extend_button_ipe_length = 0
+            else:
+                extend_button_ipe_length = -2 * obj.extend_length * scale
+
+            level = simplify_levels[i + 1] + extend_button_ipe_length
+            if souble_ipes:
+                if n != souble_ipes[-1]:
+                    souble_ipes.append(n)
+                    souble_ipe_levels.append(level)
+                else:
+                    souble_ipe_levels[-1] = level
+            else:
+                souble_ipes.append(n)
+                souble_ipe_levels.append(level)
+
+        # create main IPE structures
         ipe_shapes, bf, d, tf, tw = self.make_profile(obj)
         ipe = ipe_shapes[0]
         ipe_section_obj = FreeCAD.ActiveDocument.addObject("Part::FeaturePython", "ipe_section")
         ipe_section_obj.Shape = Part.makeCompound(ipe_shapes)
-        IPE = Arch.makeStructure(ipe_section_obj)
+        IPE = Arch.makeStructure(ipe_section_obj, name="IPE")
         h = simplify_levels[-1] - simplify_levels[0]
         IPE.Height = h
         IPE.Placement.Base = FreeCAD.Vector(0, 0, simplify_levels[0]) + obj.Placement.Base
         IPE.ViewObject.ShapeColor = (1.0, 0.0, 0.0)
+
+        # souble ipe creation
+        souble_ipe_names = []
+        souble_ipe_section = ipe.copy()
+        for i, n in enumerate(souble_ipes):
+            if n == 3:
+                souble_ipe_section.Placement.Base = FreeCAD.Vector(0, 0, souble_ipe_levels[i]) + obj.Placement.Base
+                souble_ipe_section_obj = FreeCAD.ActiveDocument.addObject("Part::FeaturePython", "ipe")
+                souble_ipe_section_obj.Shape = souble_ipe_section
+                souble_ipe_obj = Arch.makeStructure(souble_ipe_section_obj, name="IPE")
+                h = souble_ipe_levels[i + 1] - souble_ipe_levels[i]
+                souble_ipe_obj.Height = h
+                souble_ipe_obj.ViewObject.ShapeColor = (.80, 0.0, 0.0)
+                souble_ipe_names.append(souble_ipe_obj.Name)
 
         flang_plate_names = []
         connection_ipes = []
         neshiman_levels = []
         neshiman_obj_names = []
         step_file = join(dirname(abspath(__file__)),"shapes", "neshiman.step")
+        if obj.composite_deck:
+            neshiman_base_z = 0
+        else:
+            neshiman_base_z = 100 * obj.v_scale
         
         import ImportGui
 
@@ -218,48 +251,51 @@ class ColumnType:
                         neshiman_obj_names.append(o.Name)
                         neshiman_levels.append(lev)
 
-
-            else:
-                if obj.pa_baz:
-                    bb = ipe_section_obj.Shape.BoundBox
-                    width = bb.XLength - bf / 2
-                    height = 5
-                    y = (d + height) / 2
-                    connection_ipe_section = ipe.copy()
-                    if i == 0:
-                        level_i = merge_flang_levels[i] + 1.1 * scale# constant
-                        connection_ipe_section.Placement.Base = IPE.Placement.Base
-                        connection_ipe_section_obj = FreeCAD.ActiveDocument.addObject("Part::FeaturePython", "ipe")
-                        connection_ipe_section_obj.Shape = connection_ipe_section
-                        connection_ipe_obj = Arch.makeStructure(connection_ipe_section_obj)
-                        connection_ipe_obj.Height = 1 * scale
-                        connection_ipe_obj.ViewObject.ShapeColor = (.80, 0.0, 0.0)
-                        connection_ipes.append(connection_ipe_obj.Name)
-                    else:
-                        level_i = merge_flang_levels[i] + .1 * scale
+        if obj.pa_baz:
+            flangs_and_3ipes = flang_plate_names + souble_ipe_names
+            empty_levels = find_empty_levels(flangs_and_3ipes, levels, scale)
+            print(f"empty_levels = {empty_levels}")
+            if empty_levels:
+                connection_ipe_section = ipe.copy()
+                for lev in empty_levels:
+                    connection_ipe_section.Placement.Base = IPE.Placement.Base
+                    if lev != simplify_levels[0]:
+                        connection_ipe_section.Placement.Base.z = lev - .5 * scale
 
 
-                    level_j = merge_flang_levels[i + 1]
-                    for lev in levels[1:]:
-                        if level_i < lev * scale < level_j:
-                            connection_ipe_section.Placement.Base = IPE.Placement.Base
-                            connection_ipe_section.Placement.Base.z = (lev - .5) * scale
-                            connection_ipe_section_obj = FreeCAD.ActiveDocument.addObject("Part::FeaturePython", "ipe")
-                            connection_ipe_section_obj.Shape = connection_ipe_section
-                            connection_ipe_obj = Arch.makeStructure(connection_ipe_section_obj)
-                            connection_ipe_obj.Height = 1 * scale
-                            connection_ipe_obj.ViewObject.ShapeColor = (.80, 0.0, 0.0)
-                            connection_ipes.append(connection_ipe_obj.Name)
+                    connection_ipe_section_obj = FreeCAD.ActiveDocument.addObject("Part::FeaturePython", "ipe")
+                    connection_ipe_section_obj.Shape = connection_ipe_section
+                    connection_ipe_obj = Arch.makeStructure(connection_ipe_section_obj)
+                    connection_ipe_obj.Height = 1 * scale
+                    connection_ipe_obj.ViewObject.ShapeColor = (.80, 0.0, 0.0)
+                    connection_ipes.append(connection_ipe_obj.Name)
+                # for lev in levels[1:]:
+                #     for tmp_level in empty_levels:
+                #         if tmp_level[0] < lev  * scale < tmp_level[1]:
+                #             connection_ipe_section_obj = FreeCAD.ActiveDocument.addObject("Part::FeaturePython", "ipe")
+                #             connection_ipe_section_obj.Shape = connection_ipe_section
+                #             connection_ipe_obj = Arch.makeStructure(connection_ipe_section_obj)
+                #             connection_ipe_obj.Height = 1 * scale
+                #             connection_ipe_obj.ViewObject.ShapeColor = (.80, 0.0, 0.0)
+                #             connection_ipes.append(connection_ipe_obj.Name)
+
 
         # draw plate for pa_baz column (nardebani)
-        if obj.pa_baz:
-            flangs_and_ipes = connection_ipes + flang_plate_names
-            flangs_and_ipes = sorted(flangs_and_ipes, key=lambda name: FreeCAD.ActiveDocument.getObject(name).Base.Shape.BoundBox.ZMin)
-            for i in range(len(flangs_and_ipes) - 1):
-                o1 = FreeCAD.ActiveDocument.getObject(flangs_and_ipes[i])
-                o2 = FreeCAD.ActiveDocument.getObject(flangs_and_ipes[i + 1])
-                z1 = o1.Base.Shape.BoundBox.ZMax + o1.Height.Value + .2 * scale
-                z2 = o2.Base.Shape.BoundBox.ZMin
+            nardebani_levels = find_nardebani_plate_levels(connection_ipes, flangs_and_3ipes)
+            bb = ipe_section_obj.Shape.BoundBox
+            width = bb.XLength - bf / 2
+            height = 5
+            y = (d + height) / 2
+            # flangs_and_ipes = connection_ipes + flang_plate_names
+            # flangs_and_ipes = sorted(flangs_and_ipes, key=lambda name: FreeCAD.ActiveDocument.getObject(name).Base.Shape.BoundBox.ZMin)
+            # for i in range(len(flangs_and_ipes) - 1):
+            #     o1 = FreeCAD.ActiveDocument.getObject(flangs_and_ipes[i])
+            #     o2 = FreeCAD.ActiveDocument.getObject(flangs_and_ipes[i + 1])
+            #     z1 = o1.Base.Shape.BoundBox.ZMax + o1.Height.Value 
+            #     z2 = o2.Base.Shape.BoundBox.ZMin
+            for lev in nardebani_levels:
+                z1 = lev[0] + .2 * scale
+                z2 = lev[1]
                 h = z2 - z1
                 if h > 0:
                     space = .4 * scale # constant
@@ -278,10 +314,10 @@ class ColumnType:
 
         for lev in levels[1:]:
             if lev not in neshiman_levels:
-                if obj.pa_baz:
-                    y = - (d / 2 + height)
-                else:
-                    y = - d / 2
+                # if obj.pa_baz:
+                #     y = - (d / 2 + height)
+                # else:
+                y = - d / 2
                 z = lev * scale + neshiman_base_z
                 document = FreeCAD.ActiveDocument
                 current_instances = set(document.findObjects())
@@ -312,6 +348,7 @@ class ColumnType:
                 PLATE.ViewObject.ShapeColor = (0.0, 1.0, 0.0)
                 web_plate_names.append(PLATE.Name)
 
+        #  insert BASE PLATE
         h = .02 * scale
         length = 700
         base_plate = Arch.makeStructure(length=length, width=length, height= h, name='BasePlate')
@@ -322,7 +359,7 @@ class ColumnType:
         base_plate.ViewObject.ShapeColor = (1.0, 0.0, 0.0)
 
         childrens_name = flang_plate_names + web_plate_names + [IPE.Name] + \
-                        [base_plate.Name] + connection_ipes + neshiman_obj_names
+                        [base_plate.Name] + connection_ipes + neshiman_obj_names + souble_ipe_names
         old_childrens_name = obj.childrens_name
         obj.childrens_name = childrens_name
         for name in old_childrens_name:
@@ -333,7 +370,6 @@ class ColumnType:
 
 
     def make_profile(self, obj):
-        # name = ""
         shapes = []
         sectionSize = int(obj.size)
         sectionType = "IPE"
@@ -353,30 +389,15 @@ class ColumnType:
         else:
             dist = 0
 
-        # doc = FreeCAD.ActiveDocument
         ipe = create_ipe(bf, d, tw, tf)
         deltax = bf + dist
-        if obj.n == '3':
-            ipe.Placement.Base.x = deltax
-            ipe2 = ipe.copy()
-            ipe2.Placement.Base.x = 0
-            ipe3 = ipe.copy()
-            ipe3.Placement.Base.x = -deltax
-            shapes.extend([ipe, ipe2, ipe3])
-            # name += f"3{sectionType}{sectionSize}"
-
-        if obj.n == '2':
-            ipe.Placement.Base.x = deltax / 2
-            ipe2 = ipe.copy()
-            ipe2.Placement.Base.x = -deltax / 2
-            # name += f"2{sectionType}{sectionSize}"
-            shapes.extend([ipe, ipe2])
+        ipe.Placement.Base.x = deltax / 2
+        ipe2 = ipe.copy()
+        ipe2.Placement.Base.x = -deltax / 2
+        shapes.extend([ipe, ipe2])
 
         return shapes, bf, d, tf, tw
 
-        # Components = Part.makeCompound(shapes)
-        # obj.Shape = Components
-        # obj.Placement.Base.z = obj.level
 
 class ViewProviderColumnType:
     def __init__(self, obj):
@@ -421,7 +442,7 @@ class ViewProviderColumnType:
 
 
 
-def make_column_type(heights, sections_name, n=2, size=16, pa_baz=False, base_level=0, extend_length=1.2, pos=(0, 0)):
+def make_column_type(heights, sections_name, size=16, pa_baz=False, base_level=0, extend_length=1.2, pos=(0, 0)):
     '''
 
     '''
@@ -434,7 +455,7 @@ def make_column_type(heights, sections_name, n=2, size=16, pa_baz=False, base_le
     obj.extend_length = extend_length
     position = FreeCAD.Vector(pos[0], pos[1], 0)
     obj.Placement.Base = position
-    obj.n = str(n)
+    # obj.n = str(n)
     obj.size = str(size)
     obj.pa_baz = pa_baz
     FreeCAD.ActiveDocument.recompute()
@@ -442,11 +463,17 @@ def make_column_type(heights, sections_name, n=2, size=16, pa_baz=False, base_le
     return obj
 
 if __name__ == '__main__':
-    make_column_type([4, 3.2, 3.2, 3.2, 3.3, 5], ['PL200x8w200x5', 'PL200x8w200x5', 'PL200x8','PL200x8', 'w200x5', 'w200x5'], base_level=-1.2, pos=(0, 0), size="30")
-    make_column_type([4, 3.2, 3.2, 3.2, 3.3, 5], ['PL300x8w200x5', 'PL250x8w200x5', 'PL200x8','PL200x8', 'w150x5', 'w150x5'], base_level=-1.2, pos=(4000, 0), size="24", pa_baz=True)
-    make_column_type([4, 3.2, 3.2, 3.2, 3.3, 5], ['w200x5', 'PL250x8w200x5', 'PL200x8','PL200x8', 'w150x5', 'w150x5'], base_level=-1.2, pos=(4000, 4000), size="24", pa_baz=True)
-    make_column_type([4, 3.2, 3.2, 3.2, 3.3, 5], ['', '', '', '', '', ''], base_level=-1.2, pos=(0, 4000), size="14", pa_baz=True)
-    make_column_type([4, 3.2, 3.2, 3.2, 3.3, 5, 3, 3], ['PL310x10w140x8', 'PL310x10', 'PL310x8', 'PL230x8', 'PL230x6', '', '', ''], base_level=-1.2, pos=(8000, 0), n =3, size="18", pa_baz=False)
-    make_column_type([4, 3.2, 3.2, 3.2, 3.3, 5, 3, 3], ['PL310x10w140x8', 'PL310x10', 'PL310x8', 'PL230x8', 'PL230x6', 'PL230x6', 'PL230x6', 'PL230x6w140x8'], base_level=-1.2, pos=(8000, 4000), n=2, size="18", pa_baz=True)
+    make_column_type([4, 3.2, 3.2, 3.2, 3.3, 5], ['2IPE30PL200x8w200x5', '2IPE30PL200x8w200x5', '2IPE30PL200x8','2IPE30PL200x8', '2IPE30w200x5', '2IPE30w200x5'], base_level=-1.2, pos=(0, 0), size="30")
+    make_column_type([4, 3.2, 3.2, 3.2, 3.3, 5], ['2IPE24PL300x8w200x5', '2IPE24PL250x8w200x5', '2IPE24PL200x8','2IPE24PL200x8', '2IPE24w150x5', '2IPE24w150x5'], base_level=-1.2, pos=(2000, 0), size="24", pa_baz=True)
+    # make_column_type([4, 3.2, 3.2, 3.2, 3.3, 5], ['2IPE24w200x5', '2IPE24PL250x8w200x5', '2IPE24PL200x8','2IPE24PL200x8', '2IPE24w150x5', '2IPE24w150x5'], base_level=-1.2, pos=(4000, 0), size="24", pa_baz=True)
+    # make_column_type([4, 3.2, 3.2, 3.2, 3.3, 5], ['2IPE14', '2IPE14', '2IPE14', '2IPE14', '2IPE14', '2IPE14'], base_level=-1.2, pos=(6000, 0), size="14", pa_baz=True)
+    # make_column_type([4, 3.2, 3.2, 3.2, 3.3, 5, 3, 3], ['3IPE18PL310x10w140x8', '3IPE18PL310x10', '3IPE18PL310x8', '3IPE18PL230x8', '3IPE18PL230x6', '3IPE18', '3IPE18', '3IPE18'], base_level=-1.2, pos=(8000, 0), size="18", pa_baz=True)
+    # make_column_type([4, 3.2, 3.2, 3.2, 3.3, 5, 3, 3], ['2IPE18PL310x10w140x8', '2IPE18PL310x10', '2IPE18PL310x8', '2IPE18PL230x8', '2IPE18PL230x6', '2IPE18PL230x6', '2IPE18PL230x6', '2IPE18PL230x6w140x8'], base_level=-1.2, pos=(10000, 0), size="18", pa_baz=True)
+
+    # make_column_type([4, 3.2, 3.2, 3.2, 3.3, 5, 3, 3], ['2IPE18PL310x10w140x8', '3IPE18PL310x10', '3IPE18', '2IPE18', '3IPE18PL310x10', '2IPE18', '2IPE18', '2IPE18'], base_level=-1.2, pos=(12000, 0), size="18", pa_baz=True)
+    
+    # make_column_type([4, 3.2, 3.2, 3.2, 3.3, 5, 3, 3], ['2IPE14', '3IPE14PL170x6', '3IPE14PL170x6', '3IPE14', '3IPE14', '3IPE14', '3IPE14', '3IPE14'], base_level=-1.2, pos=(14000, 0), size="14", pa_baz=True)
+    # make_column_type([4, 3.2, 3.2, 3.2, 3.3, 5, 3, 3], ['2IPE14', '2IPE14', '2IPE14', '2IPE14', '2IPE14', '3IPE14', '3IPE14', '3IPE14'], base_level=-1.2, pos=(16000, 0), size="14", pa_baz=True)
+    # make_column_type([4, 3.2, 3.2, 3.2, 3.3, 5, 3, 3], ['2IPE16', '3IPE16PL280x8', '3IPE16PL280x8', '3IPE16PL200x6', '3IPE16PL200x6', '3IPE16', '3IPE16'], base_level=-1.2, pos=(18000, 0), size="16", pa_baz=True)
 
 
