@@ -186,6 +186,7 @@ class ColumnType:
         ipe_section_obj = FreeCAD.ActiveDocument.addObject("Part::FeaturePython", "ipe_section")
         ipe_section_obj.Shape = Part.makeCompound(ipe_shapes)
         IPE = Arch.makeStructure(ipe_section_obj, name="IPE")
+        IPE.IfcType = "Column"
         h = simplify_levels[-1] - simplify_levels[0]
         IPE.Height = h
         IPE.Placement.Base = FreeCAD.Vector(0, 0, simplify_levels[0]) + obj.Placement.Base
@@ -200,6 +201,7 @@ class ColumnType:
                 souble_ipe_section_obj = FreeCAD.ActiveDocument.addObject("Part::FeaturePython", "ipe")
                 souble_ipe_section_obj.Shape = souble_ipe_section
                 souble_ipe_obj = Arch.makeStructure(souble_ipe_section_obj, name="IPE")
+                souble_ipe_obj.IfcType = "Column"
                 h = souble_ipe_levels[i + 1] - souble_ipe_levels[i]
                 souble_ipe_obj.Height = h
                 souble_ipe_obj.ViewObject.ShapeColor = (.80, 0.0, 0.0)
@@ -230,6 +232,7 @@ class ColumnType:
                 palte_obj = FreeCAD.ActiveDocument.addObject("Part::FeaturePython", "Flang_Plate")
                 palte_obj.Shape = Part.makeCompound([plt, plb])
                 PLATE = Arch.makeStructure(palte_obj)
+                PLATE.IfcType = "Plate"
                 h = merge_flang_levels[i + 1] - merge_flang_levels[i]
                 PLATE.Height = h
                 PLATE.ViewObject.ShapeColor = (0.0, 0.0, 1.0)
@@ -266,6 +269,7 @@ class ColumnType:
                     connection_ipe_section_obj = FreeCAD.ActiveDocument.addObject("Part::FeaturePython", "ipe")
                     connection_ipe_section_obj.Shape = connection_ipe_section
                     connection_ipe_obj = Arch.makeStructure(connection_ipe_section_obj)
+                    connection_ipe_obj.IfcType = "Column"
                     connection_ipe_obj.Height = 1 * scale
                     connection_ipe_obj.ViewObject.ShapeColor = (.80, 0.0, 0.0)
                     connection_ipes.append(connection_ipe_obj.Name)
@@ -307,6 +311,7 @@ class ColumnType:
                     palte_obj = FreeCAD.ActiveDocument.addObject("Part::FeaturePython", "Flang_Plate")
                     palte_obj.Shape = Part.makeCompound([plt, plb])
                     PLATE = Arch.makeStructure(palte_obj)
+                    PLATE.IfcType = "Plate"
                     PLATE.Height = .15 * scale
                     PLATE.ViewObject.ShapeColor = (0.0, 0.0, 1.0)
                     _obj_ = Draft.make_ortho_array(PLATE, v_z=FreeCAD.Vector(0.0, 0.0, space), n_x=1, n_y=1, n_z=n_z)
@@ -343,6 +348,7 @@ class ColumnType:
                 palte_obj = FreeCAD.ActiveDocument.addObject("Part::FeaturePython", "web_Plate")
                 palte_obj.Shape = Part.makeCompound([plwr, plwl])
                 PLATE = Arch.makeStructure(palte_obj)
+                PLATE.IfcType = "Plate"
                 h = merge_web_levels[i + 1] - merge_web_levels[i]
                 PLATE.Height = h
                 PLATE.ViewObject.ShapeColor = (0.0, 1.0, 0.0)
@@ -352,6 +358,7 @@ class ColumnType:
         h = .02 * scale
         length = 700
         base_plate = Arch.makeStructure(length=length, width=length, height= h, name='BasePlate')
+        base_plate.IfcType = "Plate"
         x = obj.Placement.Base.x - length / 2
         y = obj.Placement.Base.y
         z = obj.base_level * scale - h / 2 
