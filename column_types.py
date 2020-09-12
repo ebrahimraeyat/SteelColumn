@@ -37,7 +37,7 @@ class ColumnTypes:
 				"App::PropertyFloat",
                 "v_scale",
                 "column_type",
-                ).v_scale = .5
+                ).v_scale = .25
 
 		if not hasattr(obj, "childrens_name"):
 			obj.addProperty(

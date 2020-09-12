@@ -17,13 +17,6 @@ class ColumnType:
     def set_properties(self, obj):
         self.Type = "ColumnType"
 
-        # if not hasattr(obj, "n"):
-        #     obj.addProperty(
-        #         "App::PropertyEnumeration",
-        #         "n",
-        #         "IPE",
-        #         )
-        #     obj.n = ['2', '3']
 
         if not hasattr(obj, "size"):
             obj.addProperty(
@@ -95,7 +88,7 @@ class ColumnType:
                 "App::PropertyFloat",
                 "v_scale",
                 "column_type",
-                ).v_scale = .5
+                ).v_scale = .25
 
         if not hasattr(obj, "composite_deck"):
             obj.addProperty(
@@ -103,6 +96,70 @@ class ColumnType:
                 "composite_deck",
                 "Deck",
                 ).composite_deck = True
+
+        if not hasattr(obj, "ipe_name"):
+            obj.addProperty(
+                "App::PropertyString",
+                "ipe_name",
+                "childrens_name",
+                )
+        obj.setEditorMode("ipe_name", 1)
+
+        if not hasattr(obj, "flang_plates_name"):
+            obj.addProperty(
+                "App::PropertyStringList",
+                "flang_plates_name",
+                "childrens_name",
+                )
+        obj.setEditorMode("flang_plates_name", 1)
+
+        if not hasattr(obj, "web_plates_name"):
+            obj.addProperty(
+                "App::PropertyStringList",
+                "web_plates_name",
+                "childrens_name",
+                )
+        obj.setEditorMode("web_plates_name", 1)
+
+        if not hasattr(obj, "connection_ipes_name"):
+            obj.addProperty(
+                "App::PropertyStringList",
+                "connection_ipes_name",
+                "childrens_name",
+                )
+        obj.setEditorMode("connection_ipes_name", 1)
+
+        if not hasattr(obj, "souble_ipes_name"):
+            obj.addProperty(
+                "App::PropertyStringList",
+                "souble_ipes_name",
+                "childrens_name",
+                )
+        obj.setEditorMode("souble_ipes_name", 1)
+
+        if not hasattr(obj, "base_plate_name"):
+            obj.addProperty(
+                "App::PropertyStringList",
+                "base_plate_name",
+                "childrens_name",
+                )
+        obj.setEditorMode("base_plate_name", 1)
+
+        if not hasattr(obj, "neshimans_name"):
+            obj.addProperty(
+                "App::PropertyStringList",
+                "neshimans_name",
+                "childrens_name",
+                )
+        obj.setEditorMode("neshimans_name", 1)
+
+        if not hasattr(obj, "nardebani_names"):
+            obj.addProperty(
+                "App::PropertyStringList",
+                "nardebani_names",
+                "childrens_name",
+                )
+        obj.setEditorMode("nardebani_names", 1)
 
 
     def execute(self, obj):
@@ -193,7 +250,7 @@ class ColumnType:
         IPE.ViewObject.ShapeColor = (1.0, 0.0, 0.0)
 
         # souble ipe creation
-        souble_ipe_names = []
+        souble_ipes_name = []
         souble_ipe_section = ipe.copy()
         for i, n in enumerate(souble_ipes):
             if n == 3:
@@ -205,17 +262,17 @@ class ColumnType:
                 h = souble_ipe_levels[i + 1] - souble_ipe_levels[i]
                 souble_ipe_obj.Height = h
                 souble_ipe_obj.ViewObject.ShapeColor = (.80, 0.0, 0.0)
-                souble_ipe_names.append(souble_ipe_obj.Name)
+                souble_ipes_name.append(souble_ipe_obj.Name)
 
-        flang_plate_names = []
+        flang_plates_name = []
         connection_ipes = []
         neshiman_levels = []
-        neshiman_obj_names = []
+        neshimans_name = []
         step_file = join(dirname(abspath(__file__)),"shapes", "neshiman.step")
         if obj.composite_deck:
             neshiman_base_z = 0
         else:
-            neshiman_base_z = 100 * obj.v_scale
+            neshiman_base_z = 100 * obj.v_scale * 2
         
         import ImportGui
 
@@ -236,7 +293,7 @@ class ColumnType:
                 h = merge_flang_levels[i + 1] - merge_flang_levels[i]
                 PLATE.Height = h
                 PLATE.ViewObject.ShapeColor = (0.0, 0.0, 1.0)
-                flang_plate_names.append(PLATE.Name)
+                flang_plates_name.append(PLATE.Name)
                 # create neshimans
                 for lev in levels[1:]:
                     if merge_flang_levels[i] < lev * scale < merge_flang_levels[i + 1]:
@@ -250,12 +307,13 @@ class ColumnType:
                         o = new_instances.pop()
                         o.Placement.Base = FreeCAD.Vector(0, y, z) + obj.Placement.Base
                         o.ViewObject.ShapeColor = (1.0, 1.0, 0.0)
-                        Draft.scale(o, FreeCAD.Vector(1, 1, obj.v_scale), copy=False)
-                        neshiman_obj_names.append(o.Name)
+                        Draft.scale(o, FreeCAD.Vector(1, 1, obj.v_scale * 2), copy=False)
+                        neshimans_name.append(o.Name)
                         neshiman_levels.append(lev)
 
+        nardebani_names = []
         if obj.pa_baz:
-            flangs_and_3ipes = flang_plate_names + souble_ipe_names
+            flangs_and_3ipes = flang_plates_name + souble_ipes_name
             empty_levels = find_empty_levels(flangs_and_3ipes, levels, scale)
             print(f"empty_levels = {empty_levels}")
             if empty_levels:
@@ -290,7 +348,7 @@ class ColumnType:
             width = bb.XLength - bf / 2
             height = 5
             y = (d + height) / 2
-            # flangs_and_ipes = connection_ipes + flang_plate_names
+            # flangs_and_ipes = connection_ipes + flang_plates_name
             # flangs_and_ipes = sorted(flangs_and_ipes, key=lambda name: FreeCAD.ActiveDocument.getObject(name).Base.Shape.BoundBox.ZMin)
             # for i in range(len(flangs_and_ipes) - 1):
             #     o1 = FreeCAD.ActiveDocument.getObject(flangs_and_ipes[i])
@@ -315,7 +373,7 @@ class ColumnType:
                     PLATE.Height = .15 * scale
                     PLATE.ViewObject.ShapeColor = (0.0, 0.0, 1.0)
                     _obj_ = Draft.make_ortho_array(PLATE, v_z=FreeCAD.Vector(0.0, 0.0, space), n_x=1, n_y=1, n_z=n_z)
-                    flang_plate_names.append(_obj_.Name)
+                    nardebani_names.append(_obj_.Name)
 
         for lev in levels[1:]:
             if lev not in neshiman_levels:
@@ -331,11 +389,11 @@ class ColumnType:
                 o = new_instances.pop()
                 o.Placement.Base = FreeCAD.Vector(0, y, z) + obj.Placement.Base
                 o.ViewObject.ShapeColor = (1.0, 1.0, 0.0)
-                Draft.scale(o, FreeCAD.Vector(1, 1, obj.v_scale), copy=False)
-                neshiman_obj_names.append(o.Name)
+                Draft.scale(o, FreeCAD.Vector(1, 1, obj.v_scale * 2), copy=False)
+                neshimans_name.append(o.Name)
                 neshiman_levels.append(lev)
 
-        web_plate_names = []
+        web_plates_name = []
         for i, plate in enumerate(merge_web_plates):
             if plate:
                 width = plate[0]
@@ -352,7 +410,7 @@ class ColumnType:
                 h = merge_web_levels[i + 1] - merge_web_levels[i]
                 PLATE.Height = h
                 PLATE.ViewObject.ShapeColor = (0.0, 1.0, 0.0)
-                web_plate_names.append(PLATE.Name)
+                web_plates_name.append(PLATE.Name)
 
         #  insert BASE PLATE
         h = .02 * scale
@@ -365,8 +423,17 @@ class ColumnType:
         base_plate.Placement.Base = FreeCAD.Vector(x, y, z)
         base_plate.ViewObject.ShapeColor = (1.0, 0.0, 0.0)
 
-        childrens_name = flang_plate_names + web_plate_names + [IPE.Name] + \
-                        [base_plate.Name] + connection_ipes + neshiman_obj_names + souble_ipe_names
+        obj.ipe_name = IPE.Name
+        obj.flang_plates_name = flang_plates_name
+        obj.web_plates_name = web_plates_name
+        obj.base_plate_name = [base_plate.Name]
+        obj.connection_ipes_name = connection_ipes
+        obj.neshimans_name = neshimans_name
+        obj.souble_ipes_name = souble_ipes_name
+        obj.nardebani_names = nardebani_names
+
+        childrens_name = [IPE.Name] + flang_plates_name + web_plates_name + nardebani_names + \
+                        [base_plate.Name] + connection_ipes + neshimans_name + souble_ipes_name
         old_childrens_name = obj.childrens_name
         obj.childrens_name = childrens_name
         for name in old_childrens_name:
@@ -449,7 +516,7 @@ class ViewProviderColumnType:
 
 
 
-def make_column_type(heights, sections_name, size=16, pa_baz=False, base_level=0, extend_length=1.2, pos=(0, 0)):
+def make_column_type(heights, sections_name, size=16, pa_baz=False, base_level=0, extend_length=.8, pos=(0, 0)):
     '''
 
     '''
@@ -472,15 +539,15 @@ def make_column_type(heights, sections_name, size=16, pa_baz=False, base_level=0
 if __name__ == '__main__':
     make_column_type([4, 3.2, 3.2, 3.2, 3.3, 5], ['2IPE30PL200x8w200x5', '2IPE30PL200x8w200x5', '2IPE30PL200x8','2IPE30PL200x8', '2IPE30w200x5', '2IPE30w200x5'], base_level=-1.2, pos=(0, 0), size="30")
     make_column_type([4, 3.2, 3.2, 3.2, 3.3, 5], ['2IPE24PL300x8w200x5', '2IPE24PL250x8w200x5', '2IPE24PL200x8','2IPE24PL200x8', '2IPE24w150x5', '2IPE24w150x5'], base_level=-1.2, pos=(2000, 0), size="24", pa_baz=True)
-    # make_column_type([4, 3.2, 3.2, 3.2, 3.3, 5], ['2IPE24w200x5', '2IPE24PL250x8w200x5', '2IPE24PL200x8','2IPE24PL200x8', '2IPE24w150x5', '2IPE24w150x5'], base_level=-1.2, pos=(4000, 0), size="24", pa_baz=True)
-    # make_column_type([4, 3.2, 3.2, 3.2, 3.3, 5], ['2IPE14', '2IPE14', '2IPE14', '2IPE14', '2IPE14', '2IPE14'], base_level=-1.2, pos=(6000, 0), size="14", pa_baz=True)
-    # make_column_type([4, 3.2, 3.2, 3.2, 3.3, 5, 3, 3], ['3IPE18PL310x10w140x8', '3IPE18PL310x10', '3IPE18PL310x8', '3IPE18PL230x8', '3IPE18PL230x6', '3IPE18', '3IPE18', '3IPE18'], base_level=-1.2, pos=(8000, 0), size="18", pa_baz=True)
-    # make_column_type([4, 3.2, 3.2, 3.2, 3.3, 5, 3, 3], ['2IPE18PL310x10w140x8', '2IPE18PL310x10', '2IPE18PL310x8', '2IPE18PL230x8', '2IPE18PL230x6', '2IPE18PL230x6', '2IPE18PL230x6', '2IPE18PL230x6w140x8'], base_level=-1.2, pos=(10000, 0), size="18", pa_baz=True)
+    make_column_type([4, 3.2, 3.2, 3.2, 3.3, 5], ['2IPE24w200x5', '2IPE24PL250x8w200x5', '2IPE24PL200x8','2IPE24PL200x8', '2IPE24w150x5', '2IPE24w150x5'], base_level=-1.2, pos=(4000, 0), size="24", pa_baz=True)
+    make_column_type([4, 3.2, 3.2, 3.2, 3.3, 5], ['2IPE14', '2IPE14', '2IPE14', '2IPE14', '2IPE14', '2IPE14'], base_level=-1.2, pos=(6000, 0), size="14", pa_baz=True)
+    make_column_type([4, 3.2, 3.2, 3.2, 3.3, 5, 3, 3], ['3IPE18PL310x10w140x8', '3IPE18PL310x10', '3IPE18PL310x8', '3IPE18PL230x8', '3IPE18PL230x6', '3IPE18', '3IPE18', '3IPE18'], base_level=-1.2, pos=(8000, 0), size="18", pa_baz=True)
+    make_column_type([4, 3.2, 3.2, 3.2, 3.3, 5, 3, 3], ['2IPE18PL310x10w140x8', '2IPE18PL310x10', '2IPE18PL310x8', '2IPE18PL230x8', '2IPE18PL230x6', '2IPE18PL230x6', '2IPE18PL230x6', '2IPE18PL230x6w140x8'], base_level=-1.2, pos=(10000, 0), size="18", pa_baz=True)
 
-    # make_column_type([4, 3.2, 3.2, 3.2, 3.3, 5, 3, 3], ['2IPE18PL310x10w140x8', '3IPE18PL310x10', '3IPE18', '2IPE18', '3IPE18PL310x10', '2IPE18', '2IPE18', '2IPE18'], base_level=-1.2, pos=(12000, 0), size="18", pa_baz=True)
+    make_column_type([4, 3.2, 3.2, 3.2, 3.3, 5, 3, 3], ['2IPE18PL310x10w140x8', '3IPE18PL310x10', '3IPE18', '2IPE18', '3IPE18PL310x10', '2IPE18', '2IPE18', '2IPE18'], base_level=-1.2, pos=(12000, 0), size="18", pa_baz=True)
     
-    # make_column_type([4, 3.2, 3.2, 3.2, 3.3, 5, 3, 3], ['2IPE14', '3IPE14PL170x6', '3IPE14PL170x6', '3IPE14', '3IPE14', '3IPE14', '3IPE14', '3IPE14'], base_level=-1.2, pos=(14000, 0), size="14", pa_baz=True)
-    # make_column_type([4, 3.2, 3.2, 3.2, 3.3, 5, 3, 3], ['2IPE14', '2IPE14', '2IPE14', '2IPE14', '2IPE14', '3IPE14', '3IPE14', '3IPE14'], base_level=-1.2, pos=(16000, 0), size="14", pa_baz=True)
-    # make_column_type([4, 3.2, 3.2, 3.2, 3.3, 5, 3, 3], ['2IPE16', '3IPE16PL280x8', '3IPE16PL280x8', '3IPE16PL200x6', '3IPE16PL200x6', '3IPE16', '3IPE16'], base_level=-1.2, pos=(18000, 0), size="16", pa_baz=True)
+    make_column_type([4, 3.2, 3.2, 3.2, 3.3, 5, 3, 3], ['2IPE14', '3IPE14PL170x6', '3IPE14PL170x6', '3IPE14', '3IPE14', '3IPE14', '3IPE14', '3IPE14'], base_level=-1.2, pos=(14000, 0), size="14", pa_baz=True)
+    make_column_type([4, 3.2, 3.2, 3.2, 3.3, 5, 3, 3], ['2IPE14', '2IPE14', '2IPE14', '2IPE14', '2IPE14', '3IPE14', '3IPE14', '3IPE14'], base_level=-1.2, pos=(16000, 0), size="14", pa_baz=True)
+    make_column_type([4, 3.2, 3.2, 3.2, 3.3, 5, 3, 3], ['2IPE16', '3IPE16PL280x8', '3IPE16PL280x8', '3IPE16PL200x6', '3IPE16PL200x6', '3IPE16', '3IPE16'], base_level=-1.2, pos=(18000, 0), size="16", pa_baz=True)
 
 
