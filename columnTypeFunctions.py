@@ -46,7 +46,6 @@ def find_empty_levels(names, levels, scale):
         o = FreeCAD.ActiveDocument.getObject(name)
         zmin = o.Base.Shape.BoundBox.ZMin
         zmax = zmin + o.Height.Value
-        print(f"{o.Name}, {zmin}, {zmax}")
         for lev in levels:
             if zmin <= lev * scale <= zmax:
                 if lev in empty_levels:
@@ -95,6 +94,7 @@ def find_nardebani_plate_levels(connection_names, names):
                 levels.append([zmax1, z])
 
     return levels
+    
 
 
 

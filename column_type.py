@@ -1,10 +1,10 @@
 import csv
-import FreeCAD
+import FreeCAD, FreeCADGui
 import Part
 import Arch
 import Draft
 from FreeCAD import Base
-from section import make_section, create_ipe, create_plate
+from section import make_section, create_ipe, create_plate, create_neshiman
 from columnTypeFunctions import (decompose_section_name, remove_obj,
                                 find_empty_levels, find_nardebani_plate_levels)
 from os.path import join, dirname, abspath
@@ -47,6 +47,14 @@ class ColumnType:
                 "column_type",
             )
 
+        if not hasattr(obj, "levels"):
+            obj.addProperty(
+                "App::PropertyFloatList",
+                "levels",
+                "column_type",
+            )
+        obj.setEditorMode("levels", 1)
+
         if not hasattr(obj, "base_level"):
             obj.addProperty(
                 "App::PropertyFloat",
@@ -61,6 +69,22 @@ class ColumnType:
                 "column_type",
                 )
         obj.setEditorMode("childrens_name", 1)
+
+        if not hasattr(obj, "front_draw_sources_name"):
+            obj.addProperty(
+                "App::PropertyStringList",
+                "front_draw_sources_name",
+                "views",
+                )
+        obj.setEditorMode("front_draw_sources_name", 1)
+
+        if not hasattr(obj, "right_draw_childrens_name"):
+            obj.addProperty(
+                "App::PropertyStringList",
+                "right_draw_childrens_name",
+                "views",
+                )
+        obj.setEditorMode("right_draw_childrens_name", 1)
 
         if not hasattr(obj, "sections_name"):
             obj.addProperty(
@@ -89,6 +113,14 @@ class ColumnType:
                 "v_scale",
                 "column_type",
                 ).v_scale = .25
+
+        if not hasattr(obj, "dist"):
+            obj.addProperty(
+                "App::PropertyFloat",
+                "dist",
+                "column_type",
+                )
+        obj.setEditorMode("dist", 1)
 
         if not hasattr(obj, "composite_deck"):
             obj.addProperty(
@@ -161,13 +193,28 @@ class ColumnType:
                 )
         obj.setEditorMode("nardebani_names", 1)
 
+        if not hasattr(obj, "sections_obj_name"):
+            obj.addProperty(
+                "App::PropertyStringList",
+                "sections_obj_name",
+                "childrens_name",
+                )
+        obj.setEditorMode("sections_obj_name", 1)
+
+        
+
 
     def execute(self, obj):
+        RED = (1.0, 0.0, 0.0)
+        GREEN = (0., 1., 0.)
+        BLUE = (0.0, 0.0, 1.0)
+
         scale = 1000 * obj.v_scale
         # shapes = []
         levels = [obj.base_level]
         for height in obj.heights:
             levels.append(levels[-1] + height)
+        obj.levels = [lev  * scale for lev in levels]
 
         simplify_sections_name = [obj.sections_name[0]]
         simplify_levels =[obj.base_level * scale]
@@ -238,8 +285,9 @@ class ColumnType:
                 souble_ipe_levels.append(level)
 
         # create main IPE structures
-        ipe_shapes, bf, d, tf, tw = self.make_profile(obj)
+        ipe_shapes, edges, bf, d, tf, tw = self.make_profile(obj)
         ipe = ipe_shapes[0]
+        edge = edges[0]
         ipe_section_obj = FreeCAD.ActiveDocument.addObject("Part::FeaturePython", "ipe_section")
         ipe_section_obj.Shape = Part.makeCompound(ipe_shapes)
         IPE = Arch.makeStructure(ipe_section_obj, name="IPE")
@@ -247,11 +295,25 @@ class ColumnType:
         h = simplify_levels[-1] - simplify_levels[0]
         IPE.Height = h
         IPE.Placement.Base = FreeCAD.Vector(0, 0, simplify_levels[0]) + obj.Placement.Base
-        IPE.ViewObject.ShapeColor = (1.0, 0.0, 0.0)
+        IPE.ViewObject.ShapeColor = RED
+
+        front_draw_sources_name = []
+
+        line = FreeCAD.ActiveDocument.addObject("Part::FeaturePython", "line")
+        line.Shape = Part.makeCompound(edges)
+        ipe_draw = FreeCAD.ActiveDocument.addObject('Part::Extrusion','ipe_draw')
+        ipe_draw.Base = line
+        ipe_draw.Dir = FreeCAD.Vector(0, 0, 1)
+        ipe_draw.LengthFwd = h
+        ipe_draw.Placement.Base = IPE.Placement.Base
+        ipe_draw.ViewObject.ShapeColor = RED
+        front_draw_sources_name.append(ipe_draw.Name)
+
 
         # souble ipe creation
         souble_ipes_name = []
         souble_ipe_section = ipe.copy()
+        souble_ipe_edge = edge.copy()
         for i, n in enumerate(souble_ipes):
             if n == 3:
                 souble_ipe_section.Placement.Base = FreeCAD.Vector(0, 0, souble_ipe_levels[i]) + obj.Placement.Base
@@ -263,6 +325,16 @@ class ColumnType:
                 souble_ipe_obj.Height = h
                 souble_ipe_obj.ViewObject.ShapeColor = (.80, 0.0, 0.0)
                 souble_ipes_name.append(souble_ipe_obj.Name)
+
+                souble_ipe_edge.Placement.Base = FreeCAD.Vector(0, 0, souble_ipe_levels[i]) + obj.Placement.Base
+                line = FreeCAD.ActiveDocument.addObject("Part::FeaturePython", "line")
+                line.Shape = souble_ipe_edge
+                souble_ipe_draw = FreeCAD.ActiveDocument.addObject('Part::Extrusion','ipe_draw')
+                souble_ipe_draw.Base = line
+                souble_ipe_draw.Dir = FreeCAD.Vector(0, 0, 1)
+                souble_ipe_draw.LengthFwd = h
+                souble_ipe_draw.ViewObject.ShapeColor = (.80, 0.0, 0.0)
+                front_draw_sources_name.append(souble_ipe_draw.Name)
 
         flang_plates_name = []
         connection_ipes = []
@@ -282,7 +354,7 @@ class ColumnType:
                 width = plate[0]
                 height = plate[1]
                 y = (d + height) / 2
-                plt = create_plate(width, height)
+                plt, edge = create_plate(width, height)
                 plt.Placement.Base = FreeCAD.Vector(0, y, merge_flang_levels[i]) + obj.Placement.Base
                 plb = plt.copy()
                 plb.Placement.Base = FreeCAD.Vector(0, -y, merge_flang_levels[i]) + obj.Placement.Base
@@ -292,24 +364,35 @@ class ColumnType:
                 PLATE.IfcType = "Plate"
                 h = merge_flang_levels[i + 1] - merge_flang_levels[i]
                 PLATE.Height = h
-                PLATE.ViewObject.ShapeColor = (0.0, 0.0, 1.0)
+                PLATE.ViewObject.ShapeColor = BLUE
                 flang_plates_name.append(PLATE.Name)
-                # create neshimans
-                for lev in levels[1:]:
-                    if merge_flang_levels[i] < lev * scale < merge_flang_levels[i + 1]:
-                        y = - (d / 2 + height)
-                        z = lev * scale + neshiman_base_z
 
-                        document = FreeCAD.ActiveDocument
-                        current_instances = set(document.findObjects())
-                        ImportGui.insert(step_file, document.Name)
-                        new_instances = set(document.findObjects()) - current_instances
-                        o = new_instances.pop()
-                        o.Placement.Base = FreeCAD.Vector(0, y, z) + obj.Placement.Base
-                        o.ViewObject.ShapeColor = (1.0, 1.0, 0.0)
-                        Draft.scale(o, FreeCAD.Vector(1, 1, obj.v_scale * 2), copy=False)
-                        neshimans_name.append(o.Name)
-                        neshiman_levels.append(lev)
+                plb_edge = edge.copy()
+                plb_edge.Placement.Base = FreeCAD.Vector(0, -y, merge_flang_levels[i]) + obj.Placement.Base
+                line = FreeCAD.ActiveDocument.addObject("Part::FeaturePython", "line")
+                line.Shape = plb_edge
+                plb_draw = FreeCAD.ActiveDocument.addObject('Part::Extrusion','plate_draw')
+                plb_draw.Base = line
+                plb_draw.Dir = FreeCAD.Vector(0, 0, 1)
+                plb_draw.LengthFwd = h
+                plb_draw.ViewObject.ShapeColor = BLUE
+                front_draw_sources_name.append(plb_draw.Name)
+                # create neshimans
+                # for lev in levels[1:]:
+                #     if merge_flang_levels[i] < lev * scale < merge_flang_levels[i + 1]:
+                #         y = - (d / 2 + height)
+                #         z = lev * scale + neshiman_base_z
+
+                #         document = FreeCAD.ActiveDocument
+                #         current_instances = set(document.findObjects())
+                #         ImportGui.insert(step_file, document.Name)
+                #         new_instances = set(document.findObjects()) - current_instances
+                #         o = new_instances.pop()
+                #         o.Placement.Base = FreeCAD.Vector(0, y, z) + obj.Placement.Base
+                #         o.ViewObject.ShapeColor = (1.0, 1.0, 0.0)
+                #         Draft.scale(o, FreeCAD.Vector(1, 1, obj.v_scale * 2), copy=False)
+                #         neshimans_name.append(o.Name)
+                #         neshiman_levels.append(lev)
 
         nardebani_names = []
         if obj.pa_baz:
@@ -362,7 +445,7 @@ class ColumnType:
                 if h > 0:
                     space = .4 * scale # constant
                     n_z = int(h / space)
-                    plt = create_plate(width, height)
+                    plt, _ = create_plate(width, height)
                     plt.Placement.Base = FreeCAD.Vector(0, y, z1) + obj.Placement.Base
                     plb = plt.copy()
                     plb.Placement.Base = FreeCAD.Vector(0, -y, z1) + obj.Placement.Base
@@ -375,23 +458,23 @@ class ColumnType:
                     _obj_ = Draft.make_ortho_array(PLATE, v_z=FreeCAD.Vector(0.0, 0.0, space), n_x=1, n_y=1, n_z=n_z)
                     nardebani_names.append(_obj_.Name)
 
-        for lev in levels[1:]:
-            if lev not in neshiman_levels:
-                # if obj.pa_baz:
-                #     y = - (d / 2 + height)
-                # else:
-                y = - d / 2
-                z = lev * scale + neshiman_base_z
-                document = FreeCAD.ActiveDocument
-                current_instances = set(document.findObjects())
-                ImportGui.insert(step_file, document.Name)
-                new_instances = set(document.findObjects()) - current_instances
-                o = new_instances.pop()
-                o.Placement.Base = FreeCAD.Vector(0, y, z) + obj.Placement.Base
-                o.ViewObject.ShapeColor = (1.0, 1.0, 0.0)
-                Draft.scale(o, FreeCAD.Vector(1, 1, obj.v_scale * 2), copy=False)
-                neshimans_name.append(o.Name)
-                neshiman_levels.append(lev)
+        # for lev in levels[1:]:
+        #     if lev not in neshiman_levels:
+        #         # if obj.pa_baz:
+        #         #     y = - (d / 2 + height)
+        #         # else:
+        #         y = - d / 2
+        #         z = lev * scale + neshiman_base_z
+        #         document = FreeCAD.ActiveDocument
+        #         current_instances = set(document.findObjects())
+        #         ImportGui.insert(step_file, document.Name)
+        #         new_instances = set(document.findObjects()) - current_instances
+        #         o = new_instances.pop()
+        #         o.Placement.Base = FreeCAD.Vector(0, y, z) + obj.Placement.Base
+        #         o.ViewObject.ShapeColor = (1.0, 1.0, 0.0)
+        #         Draft.scale(o, FreeCAD.Vector(1, 1, obj.v_scale * 2), copy=False)
+        #         neshimans_name.append(o.Name)
+        #         neshiman_levels.append(lev)
 
         web_plates_name = []
         for i, plate in enumerate(merge_web_plates):
@@ -399,7 +482,7 @@ class ColumnType:
                 width = plate[0]
                 height = plate[1]
                 x = ipe.Placement.Base.x + (tw + height) / 2
-                plwr = create_plate(height, width)
+                plwr, _ = create_plate(height, width)
                 plwr.Placement.Base = FreeCAD.Vector(x, 0, merge_web_levels[i]) + obj.Placement.Base
                 plwl = plwr.copy(False)
                 plwl.Placement.Base = FreeCAD.Vector(-x, 0, merge_web_levels[i]) + obj.Placement.Base
@@ -423,6 +506,41 @@ class ColumnType:
         base_plate.Placement.Base = FreeCAD.Vector(x, y, z)
         base_plate.ViewObject.ShapeColor = (1.0, 0.0, 0.0)
 
+        # draw sections
+        sections_obj_name = []
+        for i in range(len(obj.heights)):
+            level = (levels[i] + obj.heights[i] / 2) * scale
+            section = make_section(obj.sections_name[i], dist=obj.dist, level=level, scale=obj.v_scale)
+            section.Placement.Base = obj.Placement.Base
+            section.Placement.Base.x += 500
+            sections_obj_name.append(section.Name)
+
+
+        h = 300 * obj.v_scale
+        i_shape = create_neshiman(2 * bf / 3, h, 6, 8)
+        i_shape.Placement = FreeCAD.Placement(FreeCAD.Vector(0, -d / 2, 0) + obj.Placement.Base,
+                FreeCAD.Rotation(FreeCAD.Vector(1, 0, 0), 90))
+        if obj.composite_deck:
+            i_shape.Placement.Base.z -= h / 2
+        else:
+            i_shape.Placement.Base.z += h / 2
+        i_obj = FreeCAD.ActiveDocument.addObject("Part::FeaturePython", "ipe")
+        i_obj.Shape = i_shape
+        neshiman_obj = Arch.makeStructure(i_obj, name="IPE")
+        neshiman_obj.IfcType = "Beam"
+        h = 100
+        neshiman_obj.Height = h
+        neshiman_obj.ViewObject.ShapeColor = (.80, 0.0, 0.0)
+        neshimans_name.append(neshiman_obj.Name)
+        # Draft.scale(neshiman_obj, FreeCAD.Vector(1, 1, obj.v_scale * 2), copy=False)
+        for lev in levels[2:]:
+            neshiman_clone_obj = Arch.cloneComponent(neshiman_obj)
+            neshiman_clone_obj.ViewObject.ShapeColor = (.80, 0.0, 0.0)
+            neshiman_clone_obj.Placement.Base.z += lev * scale
+            neshimans_name.append(neshiman_clone_obj.Name)
+        
+        neshiman_obj.Placement.Base.z += levels[1] * scale
+
         obj.ipe_name = IPE.Name
         obj.flang_plates_name = flang_plates_name
         obj.web_plates_name = web_plates_name
@@ -431,9 +549,12 @@ class ColumnType:
         obj.neshimans_name = neshimans_name
         obj.souble_ipes_name = souble_ipes_name
         obj.nardebani_names = nardebani_names
+        obj.sections_obj_name = sections_obj_name
+        obj.front_draw_sources_name = front_draw_sources_name
 
         childrens_name = [IPE.Name] + flang_plates_name + web_plates_name + nardebani_names + \
-                        [base_plate.Name] + connection_ipes + neshimans_name + souble_ipes_name
+                        [base_plate.Name] + connection_ipes + neshimans_name + \
+                        souble_ipes_name + sections_obj_name + front_draw_sources_name
         old_childrens_name = obj.childrens_name
         obj.childrens_name = childrens_name
         for name in old_childrens_name:
@@ -445,6 +566,7 @@ class ColumnType:
 
     def make_profile(self, obj):
         shapes = []
+        edges = []
         sectionSize = int(obj.size)
         sectionType = "IPE"
         file_name = "Section_IPE.csv"
@@ -459,18 +581,22 @@ class ColumnType:
                     break
 
         if obj.pa_baz:
-            dist = bf
+            obj.dist = bf
         else:
-            dist = 0
+            obj.dist = 0
 
-        ipe = create_ipe(bf, d, tw, tf)
-        deltax = bf + dist
+        ipe, edge = create_ipe(bf, d, tw, tf)
+        deltax = bf + obj.dist
         ipe.Placement.Base.x = deltax / 2
+        edge.Placement.Base.x = deltax / 2
         ipe2 = ipe.copy()
         ipe2.Placement.Base.x = -deltax / 2
+        edge2 = edge.copy()
+        edge2.Placement.Base.x = -deltax / 2
         shapes.extend([ipe, ipe2])
+        edges.extend([edge, edge2])
 
-        return shapes, bf, d, tf, tw
+        return shapes, edges, bf, d, tf, tw
 
 
 class ViewProviderColumnType:
@@ -537,10 +663,10 @@ def make_column_type(heights, sections_name, size=16, pa_baz=False, base_level=0
     return obj
 
 if __name__ == '__main__':
-    make_column_type([4, 3.2, 3.2, 3.2, 3.3, 5], ['2IPE30PL200x8w200x5', '2IPE30PL200x8w200x5', '2IPE30PL200x8','2IPE30PL200x8', '2IPE30w200x5', '2IPE30w200x5'], base_level=-1.2, pos=(0, 0), size="30")
-    make_column_type([4, 3.2, 3.2, 3.2, 3.3, 5], ['2IPE24PL300x8w200x5', '2IPE24PL250x8w200x5', '2IPE24PL200x8','2IPE24PL200x8', '2IPE24w150x5', '2IPE24w150x5'], base_level=-1.2, pos=(2000, 0), size="24", pa_baz=True)
-    make_column_type([4, 3.2, 3.2, 3.2, 3.3, 5], ['2IPE24w200x5', '2IPE24PL250x8w200x5', '2IPE24PL200x8','2IPE24PL200x8', '2IPE24w150x5', '2IPE24w150x5'], base_level=-1.2, pos=(4000, 0), size="24", pa_baz=True)
-    make_column_type([4, 3.2, 3.2, 3.2, 3.3, 5], ['2IPE14', '2IPE14', '2IPE14', '2IPE14', '2IPE14', '2IPE14'], base_level=-1.2, pos=(6000, 0), size="14", pa_baz=True)
+    # make_column_type([4, 3.2, 3.2, 3.2, 3.3, 5], ['2IPE30PL200x8w200x5', '2IPE30PL200x8w200x5', '2IPE30PL200x8','2IPE30PL200x8', '2IPE30w200x5', '2IPE30w200x5'], base_level=-1.2, pos=(0, 0), size="30")
+    # make_column_type([4, 3.2, 3.2, 3.2, 3.3, 5], ['2IPE24PL300x8w200x5', '2IPE24PL250x8w200x5', '2IPE24PL200x8','2IPE24PL200x8', '2IPE24w150x5', '2IPE24w150x5'], base_level=-1.2, pos=(2000, 0), size="24", pa_baz=True)
+    # make_column_type([4, 3.2, 3.2, 3.2, 3.3, 5], ['2IPE24w200x5', '2IPE24PL250x8w200x5', '2IPE24PL200x8','2IPE24PL200x8', '2IPE24w150x5', '2IPE24w150x5'], base_level=-1.2, pos=(4000, 0), size="24", pa_baz=True)
+    # make_column_type([4, 3.2, 3.2, 3.2, 3.3, 5], ['2IPE14', '2IPE14', '2IPE14', '2IPE14', '2IPE14', '2IPE14'], base_level=-1.2, pos=(6000, 0), size="14", pa_baz=True)
     make_column_type([4, 3.2, 3.2, 3.2, 3.3, 5, 3, 3], ['3IPE18PL310x10w140x8', '3IPE18PL310x10', '3IPE18PL310x8', '3IPE18PL230x8', '3IPE18PL230x6', '3IPE18', '3IPE18', '3IPE18'], base_level=-1.2, pos=(8000, 0), size="18", pa_baz=True)
     make_column_type([4, 3.2, 3.2, 3.2, 3.3, 5, 3, 3], ['2IPE18PL310x10w140x8', '2IPE18PL310x10', '2IPE18PL310x8', '2IPE18PL230x8', '2IPE18PL230x6', '2IPE18PL230x6', '2IPE18PL230x6', '2IPE18PL230x6w140x8'], base_level=-1.2, pos=(10000, 0), size="18", pa_baz=True)
 
@@ -548,6 +674,9 @@ if __name__ == '__main__':
     
     make_column_type([4, 3.2, 3.2, 3.2, 3.3, 5, 3, 3], ['2IPE14', '3IPE14PL170x6', '3IPE14PL170x6', '3IPE14', '3IPE14', '3IPE14', '3IPE14', '3IPE14'], base_level=-1.2, pos=(14000, 0), size="14", pa_baz=True)
     make_column_type([4, 3.2, 3.2, 3.2, 3.3, 5, 3, 3], ['2IPE14', '2IPE14', '2IPE14', '2IPE14', '2IPE14', '3IPE14', '3IPE14', '3IPE14'], base_level=-1.2, pos=(16000, 0), size="14", pa_baz=True)
-    make_column_type([4, 3.2, 3.2, 3.2, 3.3, 5, 3, 3], ['2IPE16', '3IPE16PL280x8', '3IPE16PL280x8', '3IPE16PL200x6', '3IPE16PL200x6', '3IPE16', '3IPE16'], base_level=-1.2, pos=(18000, 0), size="16", pa_baz=True)
+    make_column_type([4, 3.2, 3.2, 3.2, 3.3, 5, 3, 3], ['2IPE16', '3IPE16PL280x8', '3IPE16PL280x8', '3IPE16PL280x8', '3IPE16PL200x6', '3IPE16PL200x6', '3IPE16', '3IPE16'], base_level=-1.2, pos=(18000, 0), size="16", pa_baz=True)
+
+    FreeCADGui.ActiveDocument.ActiveView.viewFront()
+    FreeCADGui.SendMsgToActiveView("ViewFit")
 
 

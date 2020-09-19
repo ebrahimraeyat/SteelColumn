@@ -31,27 +31,6 @@ class Section:
                 "section",
             )
 
-        # if not hasattr(obj, "core_section"):
-        #     obj.addProperty(
-        #         "App::PropertyLinkList",
-        #         "core_section",
-        #         "Components",
-        #         )
-
-        # if not hasattr(obj, "flange_plate"):
-        #     obj.addProperty(
-        #         "App::PropertyLinkList",
-        #         "flange_plate",
-        #         "Components",
-        #         )
-
-        # if not hasattr(obj, "web_plate"):
-        #     obj.addProperty(
-        #         "App::PropertyLinkList",
-        #         "web_plate",
-        #         "Components",
-        #         )
-
         if not hasattr(obj, "flange_plate_size"):
             obj.addProperty(
                 "App::PropertyIntegerList",
@@ -66,13 +45,6 @@ class Section:
                 "section",
             )
 
-        if not hasattr(obj, "outer_wires"):
-            obj.addProperty(
-                "App::PropertyLinkList",
-                "outer_wires",
-                "section",
-                )
-
         if not hasattr(obj, "dist"):
             obj.addProperty(
                 "App::PropertyFloat",
@@ -84,6 +56,20 @@ class Section:
             obj.addProperty(
                 "App::PropertyFloat",
                 "level",
+                "section",
+                )
+
+        if not hasattr(obj, "scale"):
+            obj.addProperty(
+                "App::PropertyFloat",
+                "scale",
+                "section",
+                )
+
+        if not hasattr(obj, "name"):
+            obj.addProperty(
+                "App::PropertyString",
+                "name",
                 "section",
                 )
 
@@ -106,31 +92,29 @@ class Section:
 
         dist = obj.dist
         doc = FreeCAD.ActiveDocument
-        ipe = create_ipe(bf, d, tw, tf)
+        ipe, _ = create_ipe(bf, d, tw, tf)
         deltax = bf + dist
+
+        # if obj.n == 2:
+        ipe.Placement.Base.x = deltax / 2
+        ipe2 = ipe.copy()
+        ipe2.Placement.Base.x = -deltax / 2
+        name += f"2{sectionType}{sectionSize}"
+        shapes.extend([ipe, ipe2])
+
         if obj.n == 3:
-            ipe.Placement.Base.x = deltax
-            ipe2 = ipe.copy()
-            ipe2.Placement.Base.x = 0
             ipe3 = ipe.copy()
-            ipe3.Placement.Base.x = -deltax
+            ipe3.Placement.Base.x = 0
             # ipe2 = Draft.move(ipe, FreeCAD.Vector(-deltax, 0, 0), copy=True)
             # ipe3 = Draft.move(ipe, FreeCAD.Vector(-2 * deltax, 0, 0), copy=True)
-            shapes.extend([ipe, ipe2, ipe3])
-            name += f"3{sectionType}{sectionSize}"
-
-        if obj.n == 2:
-            ipe.Placement.Base.x = deltax / 2
-            ipe2 = ipe.copy()
-            ipe2.Placement.Base.x = -deltax / 2
-            name += f"2{sectionType}{sectionSize}"
-            shapes.extend([ipe, ipe2])
+            shapes.append(ipe3)
+            name = f"3{sectionType}{sectionSize}"
 
         if obj.flange_plate_size:
             width = obj.flange_plate_size[0]
             height = obj.flange_plate_size[1]
             y = (d + height) / 2
-            plt = create_plate(width, height)
+            plt, _ = create_plate(width, height)
             plt.Placement.Base.y = y
             # plt.ViewObject.ShapeColor = (0.0, 0.0, 1.0)
             # gui.getObject(plt.Label).DisplayMode = "Wireframe"
@@ -146,7 +130,7 @@ class Section:
             # x = ipe.Shape.BoundBox.Center.x + (ipe.WebThickness.Value + height) / 2
             x = ipe.Placement.Base.x + (tw + height) / 2
 
-            plwr = create_plate(height, width)
+            plwr, _ = create_plate(height, width)
             plwr.Placement.Base.x = x
 
             # gui.getObject(plwr.Label).ShapeColor = (0.0, 1.0, 0.0)
@@ -158,13 +142,16 @@ class Section:
             name += f"W{width}X{height}"
 
         Components = Part.makeCompound(shapes)
+        # Components.scale = obj.scale
         obj.Shape = Components
         obj.Placement.Base.z = obj.level
+        obj.Placement.Rotation = FreeCAD.Rotation(FreeCAD.Vector(1,0,0),90)
         # for o in (obj.core_section + obj.flange_plate + obj.web_plate):
         #     hide(o)
         #     print(o.Label)
         #     FreeCAD.ActiveDocument.removeObject(o.Label)
         obj.Label = name
+        obj.name = name
         
 
 def create_ipe(width, height, tw, tf):
@@ -183,7 +170,38 @@ def create_ipe(width, height, tw, tf):
     p12 = Vector(-width/2,(-height/2)+tf,0)
     p = Part.makePolygon([p1,p2,p3,p4,p5,p6,p7,p8,p9,p10,p11,p12,p1])
     p = Part.Face(p)
-    return p
+    edge = Part.makeLine(p1, p2)
+    return p, edge
+
+
+def create_neshiman(width, height, tw, tf):
+    s1, _ = create_ipe(width, height, tw, tf)
+
+    tf2 = height / 10
+    tw2 = 10
+
+    s2, _ = create_plate(1.5 * width, tf2)
+    s2.Placement.Base.y -= height / 2 + tf2 / 2
+
+    x1 = -(width + tw2) / 2
+    x2 = x1 + tw2
+    y1 = -height / 2 - tf2
+    y2 = y1 - height / 2
+    p1 = Vector(x1, y1, 0)
+    p2 = Vector(x2, y1, 0)
+    p3 = Vector(x2, y2, 0)
+    p4 = Vector(x1, y2, 0)
+    s3 = Part.makePolygon([p1, p2, p3, p4, p1])
+    s3 = Part.Face(s3)
+
+    s4 = s3.copy()
+    s4.Placement.Base.x = width
+
+    return Part.makeCompound([s1, s2, s3, s4])
+
+
+
+
 
 def create_plate(width, height):
     import Part
@@ -193,7 +211,8 @@ def create_plate(width, height):
     p4 = Vector(-width/2,height/2,0)
     p = Part.makePolygon([p1,p2,p3,p4,p1])
     p = Part.Face(p)
-    return p    
+    edge = Part.makeLine(p4, p3)
+    return p, edge
 
         # for i, section in enumerate(obj.sections):
         #     if i > max_index:
@@ -236,7 +255,7 @@ class ViewProviderSection:
 
 
 
-def make_section(name, dist=0, level=0):
+def make_section(name, dist=0, level=0, scale=.25):
     # for o in FreeCAD.ActiveDocument.Objects:
     #     if o.Label == name.upper():
     #         return
@@ -252,6 +271,7 @@ def make_section(name, dist=0, level=0):
     obj.web_plate_size = web_plate_size
     obj.dist = dist
     obj.level = level
+    obj.scale = scale
     FreeCAD.ActiveDocument.recompute()
     FreeCAD.ActiveDocument.recompute()
     return obj
