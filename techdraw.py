@@ -30,7 +30,7 @@ def add_section_edges_to_dxf(name, dxfattribs, block, z, scale):
 							(p2.X * scale, p2.Z * scale + z),
 							dxfattribs=dxfattribs)
 	bb = o.Shape.BoundBox
-	dxfattribs['height'] = 30
+	dxfattribs['height'] = 30 * scale
 	x = (bb.XMax + bb.XMin) / 2 * scale
 	y = bb.ZMin  * scale + z - 20 * scale
 	block.add_text(o.name[:6],
@@ -171,6 +171,8 @@ for ct in cts:
 
 	# msp.add_blockref(ct.Name, (x * view.Scale, 0))
 new_dwg.set_modelspace_vport(height=1000, center=(0, 0))
-new_dwg.saveas("/home/ebi/ali_momen/ezdxf.dxf")
+new_dwg.saveas("/home/ebi/alaki/ezdxf.dxf")
+
+FreeCAD.ActiveDocument.removeObject(page.Name)
 
 

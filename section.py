@@ -272,8 +272,8 @@ def make_section(name, dist=0, level=0, scale=.25):
     obj.dist = dist
     obj.level = level
     obj.scale = scale
-    FreeCAD.ActiveDocument.recompute()
-    FreeCAD.ActiveDocument.recompute()
+    # FreeCAD.ActiveDocument.recompute()
+    # FreeCAD.ActiveDocument.recompute()
     return obj
 
 if __name__ == '__main__':
