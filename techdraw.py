@@ -1,21 +1,21 @@
+from os.path import join, dirname, abspath
 import TechDraw
 import FreeCADGui as Gui
 import FreeCAD
+import Part
 import ezdxf
 from ezdxf.tools.standards import linetypes
 
 
-def add_edges_to_dxf(edges, dxfattribs, block, x):
+def add_edges_to_dxf(edges, dxfattribs, block, x, y):
 	for e in edges:
 		if e.Length == 0:
 			continue
 
-		if e.BoundBox.XLength and e.BoundBox.YLength:
-			continue
 		if len(e.Vertexes) == 2:
 			p1 = e.Vertexes[0]
 			p2 = e.Vertexes[1]
-			block.add_line((p1.X + x, -p1.Y), (p2.X + x, -p2.Y), dxfattribs=dxfattribs)
+			block.add_line((p1.X + x, -p1.Y + y), (p2.X + x, -p2.Y + y), dxfattribs=dxfattribs)
 
 def add_section_edges_to_dxf(name, dxfattribs, block, z, scale):
 	edges = []
@@ -56,6 +56,40 @@ def add_section_edges_to_dxf(name, dxfattribs, block, z, scale):
 			(x, y),
 			align="MIDDLE_LEFT")
 
+def add_leader_for_connection_ipe(name, dxfattribs, block, scale):
+	o = FreeCAD.ActiveDocument.getObject(name)
+	center_of_mass = o.Shape.CenterOfMass
+	y =  center_of_mass.z * scale
+	x1 = center_of_mass.x * scale
+	x2 = x1 + 200 * scale
+	x3 = x2 + 400 * scale
+	block.add_leader(((x1, y), (x3, y)), dxfattribs={"color": 6})
+	block.add_text("L=100 Cm",
+					dxfattribs=dxfattribs).set_pos(
+					((x2 + x3) / 2, y),
+					align="BOTTOM_CENTER"
+					)
+
+def add_levels_to_dxf(ct, dxfattribs, block, scale):
+	o = FreeCAD.ActiveDocument.getObject(ct.ipe_name)
+	x = o.Shape.BoundBox.XMin * scale
+	x1 = x - 600 * scale
+	x2 = x - 200 * scale
+	for i, name in enumerate(ct.neshimans_name):
+		o = FreeCAD.ActiveDocument.getObject(name)
+		y1 = o.Shape.BoundBox.ZMax * scale
+		y2 = y1 + 30 * scale
+		block.add_leader(((x2, y1), (x2, y2), (x1, y2)))
+		if ct.levels[i + 1] > 0:
+			text = f"T.O.B = +{ct.levels[i + 1] / ct.v_scale / 1000: .2f}"
+		else:
+			text = f"T.O.B = {ct.levels[i + 1] / ct.v_scale / 1000: .2f}"
+		block.add_text(
+				text,
+				dxfattribs = dxfattribs).set_pos(
+				(x2, y2),
+				align="BOTTOM_RIGHT",
+				)
 
 def get_unique_edges(edges, ct, scale, ignore_len=False):
 	unique_edges = edges[:]
@@ -80,30 +114,10 @@ def get_unique_edges(edges, ct, scale, ignore_len=False):
 	return unique_edges
 
 		
-# def get_unique_edges(edges, current_edges=[]):
-# 	unique_edges = current_edges[:]
-# 	for e in edges:
-# 		if unique_edges:FreeCAD.ActiveDocument.getObject(ct.connection_ipes_name[0]).Height.Value
-# 			p1 = e.firstVertex()
-# 			p2 = e.lastVertex()
-# 			equal = False
-# 			for ce in unique_edges:
-# 				p3 = ce.firstVertex()
-# 				p4 = ce.lastVertex()
-# 				if ((p1.Point == p3.Point) and (p2.Point == p4.Point)):
-# 					equal = True
-# 					break
-# 			if not equal:
-# 				unique_edges.append(e)
-# 		else:
-# 			unique_edges.append(e)
-# 	return unique_edges
-
-
 
 page = FreeCAD.ActiveDocument.addObject('TechDraw::DrawPage', 'Page')
 FreeCAD.ActiveDocument.addObject('TechDraw::DrawSVGTemplate', 'Template')
-templateFileSpec = '/usr/share/freecad-daily/Mod/TechDraw/Templates/A0_Landscape_blank.svg'
+templateFileSpec = join(dirname(abspath(__file__)),"templates", "A0_Landscape_blank.svg")
 FreeCAD.ActiveDocument.Template.Template = templateFileSpec
 FreeCAD.ActiveDocument.Page.Template = FreeCAD.ActiveDocument.Template
 page.ViewObject.show()
@@ -112,6 +126,7 @@ new_dwg = ezdxf.new()
 msp = new_dwg.modelspace()
 new_dwg.layers.new(name='COL')
 new_dwg.layers.new(name="Section")
+new_dwg.layers.new(name="connection_ipe")
 line_types = [('DASHEDX2', 'Dashed (2x) ____  ____  ____  ____  ____  ____', [1.2, 1.0, -0.2]), ('DASHED2', 'Dashed (.5x) _ _ _ _ _ _ _ _ _ _ _ _ _ _', [0.1, 0.1, -0.05])]
 for name, desc, pattern in line_types:
     if name not in new_dwg.linetypes:
@@ -145,11 +160,6 @@ for ct in cts:
 	Gui.runCommand('TechDraw_ToggleFrame',0)
 	visible_edges = view.getVisibleEdges()
 	h = FreeCAD.ActiveDocument.getObject(ct.ipe_name).Height.Value * view.Scale
-	first_height = ct.heights[0] * ct.v_scale * 1000 * view.Scale
-	z = - h / 2 + first_height / 2
-	for i, name in enumerate(ct.sections_obj_name):
-		# story_mid_level = (ct.levels[i + 1] - ct.levels[i]) / 2 * view.Scale
-		add_section_edges_to_dxf(name, {'layer':"Section", 'color': 2}, msp, z, view.Scale)
 	e = visible_edges[0]
 	comp = e.generalFuse(visible_edges[1:])
 	visible_edges = comp[0].Edges
@@ -159,15 +169,37 @@ for ct in cts:
 	comp = e.generalFuse(hidden_edges[1:])
 	hidden_edges = comp[0].Edges
 
+	es = Part.Compound(visible_edges + hidden_edges)
+	ymin_view = es.BoundBox.YMin
+	base_plate = FreeCAD.ActiveDocument.getObject(ct.base_plate_name[0])
+	zmin_ct = base_plate.Shape.BoundBox.ZMin
+	y = zmin_ct * view.Scale - ymin_view
+
+	for i, name in enumerate(ct.sections_obj_name):
+		add_section_edges_to_dxf(name, {'layer':"Section", 'color': 2}, msp, 0, view.Scale)
 
 
+
+	# write connection ipe leader
+	for name in ct.connection_ipes_name:
+		add_leader_for_connection_ipe(
+			name,
+			{"layer": "connection_ipe", "color": 6, "height": 30 * view.Scale},
+			msp,
+			view.Scale,
+			)
+
+	add_levels_to_dxf(
+		ct,
+		{"layer": "levels", "color": 6, "height": 30 * view.Scale},
+		msp,
+		view.Scale,
+		)
 
 	# block = new_dwg.blocks.new(name = ct.Name)
-	# IPE = FreeCAD.ActiveDocument.getObject(ct.ipe_name)
-	# h = IPE.Height.Value * view.Scale
 	x = (ct.Placement.Base.x) * view.Scale
-	add_edges_to_dxf(visible_edges, {'layer':"COL"}, msp, x)
-	add_edges_to_dxf(hidden_edges, {'layer':"COL", "linetype":"DASHED2", "lineweight": 13}, msp, x)
+	add_edges_to_dxf(visible_edges, {'layer':"COL"}, msp, x, y)
+	add_edges_to_dxf(hidden_edges, {'layer':"COL", "linetype":"DASHED2", "lineweight": 13}, msp, x, y)
 
 	# msp.add_blockref(ct.Name, (x * view.Scale, 0))
 new_dwg.set_modelspace_vport(height=1000, center=(0, 0))
