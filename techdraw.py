@@ -59,7 +59,7 @@ def add_section_edges_to_dxf(name, dxfattribs, block, z, scale):
 def add_leader_for_connection_ipe(name, dxfattribs, block, scale):
 	o = FreeCAD.ActiveDocument.getObject(name)
 	center_of_mass = o.Shape.CenterOfMass
-	y =  center_of_mass.z * scale
+	y =  center_of_mass.z * scale + 50 * scale
 	x1 = center_of_mass.x * scale
 	x2 = x1 + 200 * scale
 	x3 = x2 + 400 * scale
@@ -70,26 +70,39 @@ def add_leader_for_connection_ipe(name, dxfattribs, block, scale):
 					align="BOTTOM_CENTER"
 					)
 
+def add_level_to_dxf(text, x1, x2, y1, y2, dxfattribs, block):
+	leader = block.add_leader(((x2, y1), (x2, y2), (x1, y2)))
+	mtext = block.add_text(
+			text,
+			dxfattribs = dxfattribs).set_pos(
+			(x2, y2),
+			align="BOTTOM_RIGHT",
+			)
+	leader.link_entity(mtext)
+
 def add_levels_to_dxf(ct, dxfattribs, block, scale):
 	o = FreeCAD.ActiveDocument.getObject(ct.ipe_name)
 	x = o.Shape.BoundBox.XMin * scale
-	x1 = x - 600 * scale
-	x2 = x - 200 * scale
+	x1 = x - 500 * scale
+	x2 = x - 100 * scale
 	for i, name in enumerate(ct.neshimans_name):
 		o = FreeCAD.ActiveDocument.getObject(name)
 		y1 = o.Shape.BoundBox.ZMax * scale
 		y2 = y1 + 30 * scale
-		block.add_leader(((x2, y1), (x2, y2), (x1, y2)))
 		if ct.levels[i + 1] > 0:
-			text = f"T.O.B = +{ct.levels[i + 1] / ct.v_scale / 1000: .2f}"
+			text = f"T.O.B = +{ct.levels[i + 1] / ct.v_scale / 1000:.2f}"
 		else:
-			text = f"T.O.B = {ct.levels[i + 1] / ct.v_scale / 1000: .2f}"
-		block.add_text(
-				text,
-				dxfattribs = dxfattribs).set_pos(
-				(x2, y2),
-				align="BOTTOM_RIGHT",
-				)
+			text = f"T.O.B = {ct.levels[i + 1] / ct.v_scale / 1000:.2f}"
+		add_level_to_dxf(text, x1, x2, y1, y2, dxfattribs, block)
+	# add base level
+	if ct.levels[0] > 0:
+		text = f"Base = +{ct.levels[0] / ct.v_scale / 1000:.2f}"
+	else:
+		text = f"Base = {ct.levels[0] / ct.v_scale / 1000:.2f}"
+	base_plate = FreeCAD.ActiveDocument.getObject(ct.base_plate_name[0])
+	y1 = base_plate.Shape.BoundBox.ZMax * scale
+	y2 = y1 + 30 * scale 
+	add_level_to_dxf(text, x1, x2, y1, y2, dxfattribs, block)
 
 def get_unique_edges(edges, ct, scale, ignore_len=False):
 	unique_edges = edges[:]
@@ -113,8 +126,8 @@ def get_unique_edges(edges, ct, scale, ignore_len=False):
 
 	return unique_edges
 
-		
-
+show_visible_edges = True		
+view_scale = 1
 page = FreeCAD.ActiveDocument.addObject('TechDraw::DrawPage', 'Page')
 FreeCAD.ActiveDocument.addObject('TechDraw::DrawSVGTemplate', 'Template')
 templateFileSpec = join(dirname(abspath(__file__)),"templates", "A0_Landscape_blank.svg")
@@ -127,7 +140,9 @@ msp = new_dwg.modelspace()
 new_dwg.layers.new(name='COL')
 new_dwg.layers.new(name="Section")
 new_dwg.layers.new(name="connection_ipe")
-line_types = [('DASHEDX2', 'Dashed (2x) ____  ____  ____  ____  ____  ____', [1.2, 1.0, -0.2]), ('DASHED2', 'Dashed (.5x) _ _ _ _ _ _ _ _ _ _ _ _ _ _', [0.1, 0.1, -0.05])]
+sc = 200 * view_scale
+line_types = [('DASHEDX2', 'Dashed (2x) ____  ____  ____  ____  ____  ____', [1.2, 1.0, -0.2]),
+			('DASHED2', 'Dashed (.5x) _ _ _ _ _ _ _ _ _ _ _ _ _ _', [0.1 * sc, 0.1 * sc, -0.05 * sc])]
 for name, desc, pattern in line_types:
     if name not in new_dwg.linetypes:
         new_dwg.linetypes.new(name=name, dxfattribs={'description': desc, 'pattern': pattern})
@@ -141,7 +156,7 @@ for o in FreeCAD.ActiveDocument.Objects:
 
 for ct in cts:
 	view = FreeCAD.ActiveDocument.addObject('TechDraw::DrawViewPart','View')
-	view.HardHidden = True
+	view.HardHidden = show_visible_edges
 	view.ViewObject.LineWidth = .005
 	view.ViewObject.HiddenWidth = .001
 	# view.Direction = (1, 0, 0)
@@ -155,7 +170,7 @@ for ct in cts:
 
 	view.Source = [FreeCAD.ActiveDocument.getObject(name) for name in names]
 	page.addView(view)
-	view.Scale = 1
+	view.Scale = view_scale
 	FreeCAD.ActiveDocument.recompute()
 	Gui.runCommand('TechDraw_ToggleFrame',0)
 	visible_edges = view.getVisibleEdges()
@@ -164,10 +179,11 @@ for ct in cts:
 	comp = e.generalFuse(visible_edges[1:])
 	visible_edges = comp[0].Edges
 	hidden_edges = view.getHiddenEdges()
-	hidden_edges = get_unique_edges(hidden_edges, ct, view.Scale, h)
-	e = hidden_edges[0]
-	comp = e.generalFuse(hidden_edges[1:])
-	hidden_edges = comp[0].Edges
+	if hidden_edges:
+		hidden_edges = get_unique_edges(hidden_edges, ct, view.Scale, h)
+		e = hidden_edges[0]
+		comp = e.generalFuse(hidden_edges[1:])
+		hidden_edges = comp[0].Edges
 
 	es = Part.Compound(visible_edges + hidden_edges)
 	ymin_view = es.BoundBox.YMin

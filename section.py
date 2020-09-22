@@ -180,7 +180,7 @@ def create_neshiman(width, height, tw, tf):
     tf2 = height / 10
     tw2 = 10
 
-    s2, _ = create_plate(1.5 * width, tf2)
+    s2, _ = create_plate(1.7 * width, tf2)
     s2.Placement.Base.y -= height / 2 + tf2 / 2
 
     x1 = -(width + tw2) / 2
@@ -198,10 +198,6 @@ def create_neshiman(width, height, tw, tf):
     s4.Placement.Base.x = width
 
     return Part.makeCompound([s1, s2, s3, s4])
-
-
-
-
 
 def create_plate(width, height):
     import Part
