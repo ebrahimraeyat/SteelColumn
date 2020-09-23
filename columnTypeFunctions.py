@@ -67,14 +67,12 @@ def find_nardebani_plate_levels(connection_names, names):
         zmin1 = o1.Base.Shape.BoundBox.ZMin
         zmax1 = zmin1 + o1.Height.Value
 
-        # zmax2 = o2.Shape.BoundBox.ZMax
         if i > 0:
             pre_o = FreeCAD.ActiveDocument.getObject(connection_names[i - 1])
             zmax_pre = pre_o.Base.Shape.BoundBox.ZMin + pre_o.Height.Value
             z_that_less_than_zmin1 = [z for z in ZMaxs if zmax_pre < z < zmin1]
         else:
             z_that_less_than_zmin1 = [z for z in ZMaxs if z < zmin1]
-        print(f"z_that_less_than_zmin1 = {z_that_less_than_zmin1}, zmin1 = {zmin1}, ZMaxs = {ZMaxs}")
         if z_that_less_than_zmin1:
             levels.append([max(z_that_less_than_zmin1), zmin1])
 

@@ -397,7 +397,6 @@ class ColumnType:
         if obj.pa_baz:
             flangs_and_3ipes = flang_plates_name + souble_ipes_name
             empty_levels = find_empty_levels(flangs_and_3ipes, levels, scale)
-            print(f"empty_levels = {empty_levels}")
             if empty_levels:
                 connection_ipe_section = ipe.copy()
                 for lev in empty_levels:
@@ -429,6 +428,7 @@ class ColumnType:
             bb = ipe_section_obj.Shape.BoundBox
             width = bb.XLength - bf / 2
             height = 5
+            plate_height = .15 * scale
             y = (d + height) / 2
             # flangs_and_ipes = connection_ipes + flang_plates_name
             # flangs_and_ipes = sorted(flangs_and_ipes, key=lambda name: FreeCAD.ActiveDocument.getObject(name).Base.Shape.BoundBox.ZMin)
@@ -438,12 +438,14 @@ class ColumnType:
             #     z1 = o1.Base.Shape.BoundBox.ZMax + o1.Height.Value 
             #     z2 = o2.Base.Shape.BoundBox.ZMin
             for lev in nardebani_levels:
-                z1 = lev[0] + .2 * scale
+                z1 = lev[0]
                 z2 = lev[1]
                 h = z2 - z1
                 if h > 0:
                     space = .4 * scale # constant
-                    n_z = int(h / space)
+                    n_z = int(h // space)
+                    free_space = h - (n_z * space - (space - plate_height))
+                    z1 += free_space / 2
                     plt, _ = create_plate(width, height)
                     plt.Placement.Base = FreeCAD.Vector(0, y, z1) + obj.Placement.Base
                     plb = plt.copy()
@@ -452,7 +454,7 @@ class ColumnType:
                     palte_obj.Shape = Part.makeCompound([plt, plb])
                     PLATE = Arch.makeStructure(palte_obj)
                     PLATE.IfcType = "Plate"
-                    PLATE.Height = .15 * scale
+                    PLATE.Height = plate_height
                     PLATE.ViewObject.ShapeColor = (0.0, 0.0, 1.0)
                     _obj_ = Draft.make_ortho_array(PLATE, v_z=FreeCAD.Vector(0.0, 0.0, space), n_x=1, n_y=1, n_z=n_z)
                     nardebani_names.append(_obj_.Name)
