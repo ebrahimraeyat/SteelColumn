@@ -98,7 +98,7 @@ def add_level_to_dxf(text, x1, x2, y1, y2, dxfattribs, block, scale):
         'xscale': scale,
         'yscale': scale},
         )
-	mtext = block.add_text(
+	block.add_text(
 			text,
 			dxfattribs = dxfattribs).set_pos(
 			(x2, y2),
@@ -128,6 +128,29 @@ def add_levels_to_dxf(ct, dxfattribs, block, scale):
 	y1 = base_plate.Shape.BoundBox.ZMax * scale
 	y2 = y1 + 30 * scale 
 	add_level_to_dxf(text, x1, x2, y1, y2, dxfattribs, block, scale)
+
+def add_nardebani_text_to_dxf(ct, dxfattribs, block, scale):
+	for name in ct.nardebani_names:
+		o = FreeCAD.ActiveDocument.getObject(name)
+		x = o.Base.Shape.BoundBox.Center.x * scale
+		y = (o.Base.Shape.BoundBox.Center.z + o.NumberZ // 2 * o.IntervalZ.z) * scale
+		block.add_blockref("nardebani", (x, y), dxfattribs={
+        'xscale': scale,
+        'yscale': scale},
+        )
+		x2 = x - 600 * scale
+		block.add_text(
+        	f"PL200*150",
+			dxfattribs = dxfattribs).set_pos(
+			(x2, y),
+			align="BOTTOM_LEFT",
+			)
+		block.add_text(
+        	f"N={o.NumberZ}",
+			dxfattribs = dxfattribs).set_pos(
+			(x2, y - 10 * scale),
+			align="TOP_LEFT",
+			)
 
 def get_unique_edges(edges, ct, scale, ignore_len=False):
 	unique_edges = edges[:]
@@ -186,8 +209,8 @@ for i, ct in enumerate(cts, start=1):
 	view.ViewObject.LineWidth = .005
 	view.ViewObject.HiddenWidth = .001
 	# view.Direction = (1, 0, 0)
-	view.Direction = (1, -1 , .3)
-	# view.Direction = (0, -1, 0)
+	# view.Direction = (1, -1 , .2)
+	view.Direction = (0, -1, 0)
 	# view.XDirection = (0, 0, 1)
 	# view.SmoothVisible = True
 	# view.Perspective = True
@@ -218,9 +241,10 @@ for i, ct in enumerate(cts, start=1):
 	zmin_ct = base_plate.Shape.BoundBox.ZMin
 	y = zmin_ct * view.Scale - ymin_view
 
+
+	# add column type text
 	text_height = 30 * view.Scale
 	x = (ct.Placement.Base.x) * view.Scale
-
 	msp.add_text(f"C{i}",
 		dxfattribs = {'color': 6, "height": 2 * text_height, 'style': 'ROMANT'}).set_pos(
 			(x, zmin_ct - 50 * view.Scale),
@@ -246,6 +270,12 @@ for i, ct in enumerate(cts, start=1):
 		{"layer": "levels", "color": 6, "height": text_height, 'style': 'ROMANT'},
 		msp,
 		view.Scale,
+		)
+	add_nardebani_text_to_dxf(
+		ct,
+		{"layer": "nardebani_text", "color": 6, "height": text_height, 'style': 'ROMANT'},
+		msp,
+		view.Scale
 		)
 
 	# block = doc.blocks.new(name = ct.Name)
