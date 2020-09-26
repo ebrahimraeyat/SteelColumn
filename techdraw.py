@@ -174,6 +174,17 @@ def get_unique_edges(edges, ct, scale, ignore_len=False):
 
 	return unique_edges
 
+def get_save_filename(ext):
+    from PySide2.QtWidgets import QFileDialog
+    filters = f"{ext[1:]} (*{ext})"
+    filename, _ = QFileDialog.getSaveFileName(None, 'select file',
+                                              None, filters)
+    if not filename:
+        return
+    if not ext in filename:
+        filename += ext
+    return filename
+
 show_visible_edges = False		
 view_scale = 1
 page = FreeCAD.ActiveDocument.addObject('TechDraw::DrawPage', 'Page')
@@ -283,8 +294,11 @@ for i, ct in enumerate(cts, start=1):
 	add_edges_to_dxf(hidden_edges, {'layer':"COL", "linetype":"DASHED2", "lineweight": 13}, msp, x, y)
 
 	# msp.add_blockref(ct.Name, (x * view.Scale, 0))
-doc.set_modelspace_vport(height=1000, center=(0, 0))
-doc.saveas("/home/ebi/alaki/ezdxf.dxf")
+height = int(len(cts) * 1000)
+doc.set_modelspace_vport(height=height, center=(height, int(height/2)))
+
+filename = get_save_filename('.dxf')
+doc.saveas(filename)
 
 FreeCAD.ActiveDocument.removeObject(page.Name)
 
