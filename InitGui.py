@@ -1,23 +1,28 @@
-import civilGui
+import SteelColumnGui
 
 
-class CivilWorkbench(Workbench):
+class SteelColumnWorkbench(Workbench):
 
 	def __init__(self):
-		self.__class__.Icon = FreeCAD.ConfigGet("AppHomePath") + "Mod/Civil/images/civil-engineering.png"
-		self.__class__.MenuText = "Civil"
-		self.__class__.ToolTip = "Civil Workbench"
+		rel_path = "Mod/SteelColumn/icons/column_types"
+		path = FreeCAD.ConfigGet("AppHomePath") + rel_path
+		import os
+		if not os.path.exists(path):
+		    path = FreeCAD.ConfigGet("UserAppData") + rel_path
+		self.__class__.Icon = path
+		self.__class__.MenuText = "SteelColumn"
+		self.__class__.ToolTip = "SteelColumn Workbench"
 
 	def Initialize(self):
 		from PySide2 import QtCore, QtGui
-		command_list = ["Section",
-						"Punch"]
+		command_list = ["Dxf",
+						]
 				
 		self.appendToolbar(str(QtCore.QT_TRANSLATE_NOOP(
-			"Civil",
-			"Civil tools")), command_list)
+			"SteelColumn",
+			"SteelColumn tools")), command_list)
 		self.appendMenu(str(QtCore.QT_TRANSLATE_NOOP(
-			"Civil",
-			"Civil")), command_list)
+			"SteelColumn",
+			"SteelColumn")), command_list)
 
-Gui.addWorkbench(CivilWorkbench())
+Gui.addWorkbench(SteelColumnWorkbench())

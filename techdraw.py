@@ -185,121 +185,113 @@ def get_save_filename(ext):
         filename += ext
     return filename
 
-show_visible_edges = False		
-view_scale = 1
-page = FreeCAD.ActiveDocument.addObject('TechDraw::DrawPage', 'Page')
-FreeCAD.ActiveDocument.addObject('TechDraw::DrawSVGTemplate', 'Template')
-templateFileSpec = join(dirname(abspath(__file__)),"templates", "A0_Landscape_blank.svg")
-FreeCAD.ActiveDocument.Template.Template = templateFileSpec
-FreeCAD.ActiveDocument.Page.Template = FreeCAD.ActiveDocument.Template
-page.ViewObject.show()
+def get_view_direction(View):
+	if View == "Flange":
+		return (0, -1, 0)
+	if View == "Web":
+		return (1, 0, 0)
+	if View == "3D":
+		return (1, -1 , 0.2)
 
-dxf_temp = join(dirname(abspath(__file__)), "templates", "TEMPLATE.DXF")
-doc = ezdxf.readfile(dxf_temp)
-msp = doc.modelspace()
-# doc.layers.new(name='COL')
-# doc.layers.new(name="Section")
-# doc.layers.new(name="connection_ipe")
-sc = 200 * view_scale
-# line_types = [('DASHEDX2', 'Dashed (2x) ____  ____  ____  ____  ____  ____', [1.2, 1.0, -0.2]),
-# 			('DASHED2', 'Dashed (.5x) _ _ _ _ _ _ _ _ _ _ _ _ _ _', [0.1 * sc, 0.1 * sc, -0.05 * sc])]
-# for name, desc, pattern in line_types:
-#     if name not in doc.linetypes:
-#         doc.linetypes.new(name=name, dxfattribs={'description': desc, 'pattern': pattern})
+def export_to_dxf(filename, hidden_edges=False, View="Flange"):
 
+	show_hidden_edges = hidden_edges	
+	view_scale = 1
+	page = FreeCAD.ActiveDocument.addObject('TechDraw::DrawPage', 'Page')
+	FreeCAD.ActiveDocument.addObject('TechDraw::DrawSVGTemplate', 'Template')
+	templateFileSpec = join(dirname(abspath(__file__)),"templates", "A0_Landscape_blank.svg")
+	FreeCAD.ActiveDocument.Template.Template = templateFileSpec
+	FreeCAD.ActiveDocument.Page.Template = FreeCAD.ActiveDocument.Template
+	page.ViewObject.show()
 
-cts = []
-for o in FreeCAD.ActiveDocument.Objects:
-	if hasattr(o, "base_plate_name"):
-		cts.append(o)
+	dxf_temp = join(dirname(abspath(__file__)), "templates", "TEMPLATE.DXF")
+	doc = ezdxf.readfile(dxf_temp)
+	msp = doc.modelspace()
+	sc = 200 * view_scale
 
-
-for i, ct in enumerate(cts, start=1):
-	view = FreeCAD.ActiveDocument.addObject('TechDraw::DrawViewPart','View')
-	view.HardHidden = show_visible_edges
-	view.ViewObject.LineWidth = .005
-	view.ViewObject.HiddenWidth = .001
-	# view.Direction = (1, 0, 0)
-	# view.Direction = (1, -1 , .2)
-	view.Direction = (0, -1, 0)
-	# view.XDirection = (0, 0, 1)
-	# view.SmoothVisible = True
-	# view.Perspective = True
-	# names = ct.front_draw_sources_name + ct.sections_obj_name
-	names = [ct.ipe_name] + ct.flang_plates_name + ct.base_plate_name + ct.nardebani_names + \
-		ct.connection_ipes_name + ct.souble_ipes_name + ct.neshimans_name
-
-	view.Source = [FreeCAD.ActiveDocument.getObject(name) for name in names]
-	page.addView(view)
-	view.Scale = view_scale
-	FreeCAD.ActiveDocument.recompute()
-	# Gui.runCommand('TechDraw_ToggleFrame',0)
-	visible_edges = view.getVisibleEdges()
-	h = FreeCAD.ActiveDocument.getObject(ct.ipe_name).Height.Value * view.Scale
-	e = visible_edges[0]
-	comp = e.generalFuse(visible_edges[1:])
-	visible_edges = comp[0].Edges
-	hidden_edges = view.getHiddenEdges()
-	if hidden_edges:
-		hidden_edges = get_unique_edges(hidden_edges, ct, view.Scale, h)
-		e = hidden_edges[0]
-		comp = e.generalFuse(hidden_edges[1:])
-		hidden_edges = comp[0].Edges
-
-	es = Part.Compound(visible_edges + hidden_edges)
-	ymin_view = es.BoundBox.YMin
-	base_plate = FreeCAD.ActiveDocument.getObject(ct.base_plate_name[0])
-	zmin_ct = base_plate.Shape.BoundBox.ZMin
-	y = zmin_ct * view.Scale - ymin_view
+	cts = []
+	for o in FreeCAD.ActiveDocument.Objects:
+		if hasattr(o, "base_plate_name"):
+			cts.append(o)
 
 
-	# add column type text
-	text_height = 30 * view.Scale
-	x = (ct.Placement.Base.x) * view.Scale
-	msp.add_text(f"C{i}",
-		dxfattribs = {'color': 6, "height": 2 * text_height, 'style': 'ROMANT'}).set_pos(
-			(x, zmin_ct - 50 * view.Scale),
-			align="TOP_CENTER",
-			)
+	for i, ct in enumerate(cts, start=1):
+		view = FreeCAD.ActiveDocument.addObject('TechDraw::DrawViewPart','View')
+		view.HardHidden = show_hidden_edges
+		view.ViewObject.LineWidth = .005
+		view.ViewObject.HiddenWidth = .001
+		view.Direction = get_view_direction(View)
 
-	for i, name in enumerate(ct.sections_obj_name):
-		add_section_edges_to_dxf(name, {'layer':"Section", 'color': 2}, msp, 0, view.Scale)
+		names = [ct.ipe_name] + ct.flang_plates_name + ct.base_plate_name + ct.nardebani_names + \
+			ct.connection_ipes_name + ct.souble_ipes_name + ct.neshimans_name
+
+		view.Source = [FreeCAD.ActiveDocument.getObject(name) for name in names]
+		page.addView(view)
+		view.Scale = view_scale
+		FreeCAD.ActiveDocument.recompute()
+		visible_edges = view.getVisibleEdges()
+		h = FreeCAD.ActiveDocument.getObject(ct.ipe_name).Height.Value * view.Scale
+		e = visible_edges[0]
+		comp = e.generalFuse(visible_edges[1:])
+		visible_edges = comp[0].Edges
+		hidden_edges = view.getHiddenEdges()
+		if hidden_edges:
+			hidden_edges = get_unique_edges(hidden_edges, ct, view.Scale, h)
+			e = hidden_edges[0]
+			comp = e.generalFuse(hidden_edges[1:])
+			hidden_edges = comp[0].Edges
+
+		es = Part.Compound(visible_edges + hidden_edges)
+		ymin_view = es.BoundBox.YMin
+		base_plate = FreeCAD.ActiveDocument.getObject(ct.base_plate_name[0])
+		zmin_ct = base_plate.Shape.BoundBox.ZMin
+		y = zmin_ct * view.Scale - ymin_view
+
+
+		# add column type text
+		text_height = 30 * view.Scale
+		x = (ct.Placement.Base.x) * view.Scale
+		msp.add_text(f"C{i}",
+			dxfattribs = {'color': 6, "height": 2 * text_height, 'style': 'ROMANT'}).set_pos(
+				(x, zmin_ct - 50 * view.Scale),
+				align="TOP_CENTER",
+				)
+
+		for i, name in enumerate(ct.sections_obj_name):
+			add_section_edges_to_dxf(name, {'layer':"Section", 'color': 2}, msp, 0, view.Scale)
 
 
 
-	# write connection ipe leader
-	for name in ct.connection_ipes_name:
-		add_leader_for_connection_ipe(
-			name,
-			{"layer": "connection_ipe", "color": 6, "height": text_height, 'style': 'ROMANT'},
+		# write connection ipe leader
+		for name in ct.connection_ipes_name:
+			add_leader_for_connection_ipe(
+				name,
+				{"layer": "connection_ipe", "color": 6, "height": text_height, 'style': 'ROMANT'},
+				msp,
+				view.Scale,
+				)
+
+		add_levels_to_dxf(
+			ct,
+			{"layer": "levels", "color": 6, "height": text_height, 'style': 'ROMANT'},
 			msp,
 			view.Scale,
 			)
+		add_nardebani_text_to_dxf(
+			ct,
+			{"layer": "nardebani_text", "color": 6, "height": text_height, 'style': 'ROMANT'},
+			msp,
+			view.Scale
+			)
 
-	add_levels_to_dxf(
-		ct,
-		{"layer": "levels", "color": 6, "height": text_height, 'style': 'ROMANT'},
-		msp,
-		view.Scale,
-		)
-	add_nardebani_text_to_dxf(
-		ct,
-		{"layer": "nardebani_text", "color": 6, "height": text_height, 'style': 'ROMANT'},
-		msp,
-		view.Scale
-		)
+		# block = doc.blocks.new(name = ct.Name)
+		add_edges_to_dxf(visible_edges, {'layer':"COL"}, msp, x, y)
+		add_edges_to_dxf(hidden_edges, {'layer':"COL", "linetype":"DASHED2", "lineweight": 13}, msp, x, y)
 
-	# block = doc.blocks.new(name = ct.Name)
-	add_edges_to_dxf(visible_edges, {'layer':"COL"}, msp, x, y)
-	add_edges_to_dxf(hidden_edges, {'layer':"COL", "linetype":"DASHED2", "lineweight": 13}, msp, x, y)
-
-	# msp.add_blockref(ct.Name, (x * view.Scale, 0))
-height = int(len(cts) * 1000)
-doc.set_modelspace_vport(height=height, center=(height, int(height/2)))
-
-filename = get_save_filename('.dxf')
-doc.saveas(filename)
-
-FreeCAD.ActiveDocument.removeObject(page.Name)
+		# msp.add_blockref(ct.Name, (x * view.Scale, 0))
+	height = int(len(cts) * 1000)
+	doc.set_modelspace_vport(height=height, center=(height, int(height/2)))
+	doc.saveas(filename)
+	FreeCAD.ActiveDocument.removeObject(page.Name)
 
 
