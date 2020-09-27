@@ -1,4 +1,5 @@
 from os.path import join, dirname, abspath
+import copy
 import TechDraw
 import FreeCADGui as Gui
 import FreeCAD
@@ -17,57 +18,66 @@ def add_edges_to_dxf(edges, dxfattribs, block, x, y):
 			p2 = e.Vertexes[1]
 			block.add_line((p1.X + x, -p1.Y + y), (p2.X + x, -p2.Y + y), dxfattribs=dxfattribs)
 
-def add_section_edges_to_dxf(name, dxfattribs, block, z, scale):
-	edges = []
-	o = FreeCAD.ActiveDocument.getObject(name)
-	for e in o.Shape.Edges:
-		edges.append(e)
-	for e in edges:
-		if len(e.Vertexes) == 2:
-			p1 = e.Vertexes[0]
-			p2 = e.Vertexes[1]
-			block.add_line((p1.X * scale, p1.Z * scale + z),
-							(p2.X * scale, p2.Z * scale + z),
-							dxfattribs=dxfattribs)
-	bb = o.Shape.BoundBox
-	dxfattribs['height'] = 30 * scale
-	dxfattribs['style'] = 'ROMANT'
-	x = (bb.XMax + bb.XMin) / 2 * scale
-	y = bb.ZMin  * scale + z - 30 * scale
-	block.add_text(f"{o.name[:6]}0",
-					dxfattribs=dxfattribs).set_pos(
-					(x, y),
-					align="TOP_CENTER"
-					)
-	if o.flange_plate_size:
-		bf, tf = o.flange_plate_size
-		y = bb.ZMax * scale + z + 20 * scale
-		block.add_text(f"2PL{bf}*{tf}",
-					dxfattribs=dxfattribs).set_pos(
-					(x, y),
-					align="BOTTOM_CENTER"
-					)
+def add_section_edges_to_dxf(ct, dxfattribs, block, z, scale):
+	dxfattribs_text = copy.deepcopy(dxfattribs)
+	dxfattribs_text['height'] = 30 * scale
+	dxfattribs_text['style'] = 'ROMANT'
+	for i, name in enumerate(ct.sections_obj_name):
+		edges = []
+		o = FreeCAD.ActiveDocument.getObject(name)
+		for e in o.Shape.Edges:
+			edges.append(e)
+		for e in edges:
+			if len(e.Vertexes) == 2:
+				p1 = e.Vertexes[0]
+				p2 = e.Vertexes[1]
+				block.add_line((p1.X * scale, p1.Z * scale + z),
+								(p2.X * scale, p2.Z * scale + z),
+								dxfattribs=dxfattribs)
+		bb = o.Shape.BoundBox
+		x = (bb.XMax + bb.XMin) / 2 * scale
+		y = bb.ZMin  * scale + z - 30 * scale
+		block.add_text(f"{o.name[:6]}0",
+						dxfattribs=dxfattribs_text).set_pos(
+						(x, y),
+						align="TOP_CENTER"
+						)
+		if o.flange_plate_size:
+			bf, tf = o.flange_plate_size
+			y = bb.ZMax * scale + z + 20 * scale
+			block.add_text(f"2PL{bf}*{tf}",
+						dxfattribs=dxfattribs_text).set_pos(
+						(x, y),
+						align="BOTTOM_CENTER"
+						)
 
-	if o.web_plate_size:
-		bf, tf = o.web_plate_size
-		y = (bb.ZMax + bb.ZMin) / 2 * scale + z
-		x = bb.XMax * scale
-		block.add_text(f"2PL{bf}*{tf}",
-			dxfattribs=dxfattribs).set_pos(
-			(x, y),
-			align="MIDDLE_LEFT")
+		if o.web_plate_size:
+			bf, tf = o.web_plate_size
+			y = (bb.ZMax + bb.ZMin) / 2 * scale + z
+			x = bb.XMax * scale
+			block.add_text(f"2PL{bf}*{tf}",
+				dxfattribs=dxfattribs_text).set_pos(
+				(x, y),
+				align="MIDDLE_LEFT")
 
-	if all((o.dist > 0, not o.flange_plate_size, o.n==2)):
-		x = bb.Center.x * scale
-		y = bb.ZMax * scale + z
-		bf = bb.XLength * scale * .8
-		tf = bb.ZLength * scale * .05
-		dxfattribs['xscale'] = bf
-		dxfattribs['yscale'] = tf
-		del(dxfattribs['height'])
-		del(dxfattribs['style'])
-		block.add_blockref("plate", (x, y), dxfattribs=dxfattribs)
-		block.add_blockref("plate", (x, y - bb.ZLength * scale - tf), dxfattribs=dxfattribs)
+		if all((o.dist > 0, not o.flange_plate_size, o.n==2)):
+			bw, bh, bt, bdist = ct.nardebani_plate_size
+			x = bb.Center.x * scale
+			y = bb.ZMax * scale + z
+
+			block.add_text(f"2PL{bw:.0f}*{bh:.0f}*{bt:.0f}@{bdist/10:.0f} Cm",
+						dxfattribs=dxfattribs_text).set_pos(
+						(x, y + 2 * bt * scale),
+						align="BOTTOM_CENTER"
+						)
+			bw *= scale
+			bt *= scale
+			dxfattribs['xscale'] = bw
+			dxfattribs['yscale'] = bt
+			block.add_blockref("plate", (x, y), dxfattribs=dxfattribs)
+			block.add_blockref("plate", (x, y - bb.ZLength * scale - bt), dxfattribs=dxfattribs)
+			del(dxfattribs['xscale'])
+			del(dxfattribs['yscale'])
 
 
 def add_leader_for_connection_ipe(name, dxfattribs, block, scale):
@@ -139,8 +149,9 @@ def add_nardebani_text_to_dxf(ct, dxfattribs, block, scale):
         'yscale': scale},
         )
 		x2 = x - 600 * scale
+		bw, bh, *_ = ct.nardebani_plate_size
 		block.add_text(
-        	f"PL200*150",
+        	f"PL{int(bw)}*{int(bh)}",
 			dxfattribs = dxfattribs).set_pos(
 			(x2, y),
 			align="BOTTOM_LEFT",
@@ -196,7 +207,7 @@ def get_view_direction(View):
 def export_to_dxf(filename, hidden_edges=False, View="Flange"):
 
 	show_hidden_edges = hidden_edges	
-	view_scale = 1
+	view_scale = .05
 	page = FreeCAD.ActiveDocument.addObject('TechDraw::DrawPage', 'Page')
 	FreeCAD.ActiveDocument.addObject('TechDraw::DrawSVGTemplate', 'Template')
 	templateFileSpec = join(dirname(abspath(__file__)),"templates", "A0_Landscape_blank.svg")
@@ -253,12 +264,11 @@ def export_to_dxf(filename, hidden_edges=False, View="Flange"):
 		x = (ct.Placement.Base.x) * view.Scale
 		msp.add_text(f"C{i}",
 			dxfattribs = {'color': 6, "height": 2 * text_height, 'style': 'ROMANT'}).set_pos(
-				(x, zmin_ct - 50 * view.Scale),
+				(x, (zmin_ct - 50) * view.Scale),
 				align="TOP_CENTER",
 				)
 
-		for i, name in enumerate(ct.sections_obj_name):
-			add_section_edges_to_dxf(name, {'layer':"Section", 'color': 2}, msp, 0, view.Scale)
+		add_section_edges_to_dxf(ct, {'layer':"Section", 'color': 2}, msp, 0, view.Scale)
 
 
 
@@ -288,10 +298,14 @@ def export_to_dxf(filename, hidden_edges=False, View="Flange"):
 		add_edges_to_dxf(visible_edges, {'layer':"COL"}, msp, x, y)
 		add_edges_to_dxf(hidden_edges, {'layer':"COL", "linetype":"DASHED2", "lineweight": 13}, msp, x, y)
 
+		FreeCAD.ActiveDocument.removeObject(view.Name)
 		# msp.add_blockref(ct.Name, (x * view.Scale, 0))
-	height = int(len(cts) * 1000)
+	height = int(len(cts) * 1000 * view_scale)
 	doc.set_modelspace_vport(height=height, center=(height, int(height/2)))
 	doc.saveas(filename)
 	FreeCAD.ActiveDocument.removeObject(page.Name)
+
+if __name__ == '__main__':
+	export_to_dxf("/home/ebi/alaki/ezdxf.dxf")
 
 

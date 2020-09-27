@@ -201,6 +201,13 @@ class ColumnType:
                 )
         obj.setEditorMode("sections_obj_name", 1)
 
+        if not hasattr(obj, "nardebani_plate_size"):
+            obj.addProperty(
+                "App::PropertyFloatList",
+                "nardebani_plate_size",
+                "column_type",
+                )
+
         
 
 
@@ -285,7 +292,8 @@ class ColumnType:
                 souble_ipe_levels.append(level)
 
         # create main IPE structures
-        ipe_shapes, edges, bf, d, tf, tw = self.make_profile(obj)
+        ipe_shapes, edges, bf, d, tf, tw, bw, bh, bt, bdist = self.make_profile(obj)
+        obj.nardebani_plate_size = [bw, bh, bt, bdist]
         ipe = ipe_shapes[0]
         edge = edges[0]
         ipe_section_obj = FreeCAD.ActiveDocument.addObject("Part::FeaturePython", "ipe_section")
@@ -426,9 +434,9 @@ class ColumnType:
         # draw plate for pa_baz column (nardebani)
             nardebani_levels = find_nardebani_plate_levels(connection_ipes, flangs_and_3ipes)
             bb = ipe_section_obj.Shape.BoundBox
-            width = bb.XLength - bf / 2
-            height = 5
-            plate_height = .15 * scale
+            width = bw
+            height = bt
+            plate_height = bh * obj.v_scale
             y = (d + height) / 2
             # flangs_and_ipes = connection_ipes + flang_plates_name
             # flangs_and_ipes = sorted(flangs_and_ipes, key=lambda name: FreeCAD.ActiveDocument.getObject(name).Base.Shape.BoundBox.ZMin)
@@ -579,6 +587,10 @@ class ColumnType:
                     d = float(row["D"])
                     tw = float(row["TW"])
                     tf = float(row["TF"])
+                    bw = float(row["BW"])
+                    bh = float(row["BH"])
+                    bt = float(row["BT"])
+                    bdist = float(row["BDIST"])
                     break
 
         if obj.pa_baz:
@@ -597,7 +609,7 @@ class ColumnType:
         shapes.extend([ipe, ipe2])
         edges.extend([edge, edge2])
 
-        return shapes, edges, bf, d, tf, tw
+        return shapes, edges, bf, d, tf, tw, bw, bh, bt, bdist
 
 
 class ViewProviderColumnType:
