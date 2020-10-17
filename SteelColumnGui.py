@@ -1,10 +1,12 @@
 import PySide2
 from PySide2 import QtCore, QtGui
 import FreeCAD
-import FreeCADGui as Gui
+import FreeCADGui
 import DraftTools
 import os
 import techdraw
+import column_types
+
 
 # from safe.punch import punchPanel
 
@@ -19,6 +21,9 @@ class Dxf:
             return
         techdraw.export_to_dxf(filename)
 
+    def IsActive(self):
+        return True if FreeCADGui.ActiveDocument else False
+
     def GetResources(self):
         MenuText = QtCore.QT_TRANSLATE_NOOP(
             "Dxf",
@@ -26,7 +31,7 @@ class Dxf:
         ToolTip = QtCore.QT_TRANSLATE_NOOP(
             "Dxf",
             "Export to Dxf")
-        rel_path = "Mod/SteelColumn/icons/Dxf.svg"
+        rel_path = "Mod/SteelColumn/Resources/icons/Dxf.svg"
         path = FreeCAD.ConfigGet("AppHomePath") + rel_path
         import os
         if not os.path.exists(path):
@@ -34,6 +39,31 @@ class Dxf:
         return {'Pixmap': path,
                 'MenuText': MenuText,
                 'ToolTip': ToolTip}
+
+class Levels:
+
+    def GetResources(self):
+        MenuText = QtCore.QT_TRANSLATE_NOOP(
+            "Levels",
+            "Creates Levels")
+        ToolTip = QtCore.QT_TRANSLATE_NOOP(
+            "Levels",
+            "Creates Levels")
+        rel_path = "Mod/SteelColumn/Resources/icons/Levels.svg"
+        path = FreeCAD.getHomePath() + rel_path
+        import os
+        if not os.path.exists(path):
+            path =  FreeCAD.getUserAppDataDir() + rel_path
+        return {'Pixmap': path,
+                'MenuText': MenuText,
+                'ToolTip': ToolTip}
+
+
+    def  Activated(self):
+        column_types.create_levels()
+
+    def IsActive(self):
+        return True if FreeCADGui.ActiveDocument else False
 
 
 # class Copy(DraftTools.Move):
@@ -88,6 +118,10 @@ def get_save_filename(ext):
     return filename
 
 
-Gui.addCommand('Dxf', Dxf())
-# Gui.addCommand('Copy', Copy())
-# Gui.addCommand('Civil_pdf', CivilPdf())
+FreeCADGui.addCommand('Dxf', Dxf())
+FreeCADGui.addCommand("steel_column_levels", Levels())
+
+steel_column_commands = [
+    "Dxf",
+    "steel_column_levels",
+    ]

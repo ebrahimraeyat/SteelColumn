@@ -1,0 +1,8 @@
+<RCC>
+  <qresource prefix="steelColumn">
+    <file>icons/up.svg</file>
+    <file>icons/down.svg</file>
+    <file>icons/remove.svg</file>
+    <file>icons/add.svg</file>
+  </qresource>
+</RCC>

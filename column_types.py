@@ -1,7 +1,18 @@
 import FreeCAD
+import FreeCADGui
 import Arch
 import Draft
+
+from PySide2.QtWidgets import *
+from PySide2.QtCore import *
+from PySide2.QtGui import *
+import sys, os
+from os.path import join, dirname, abspath
+
 from column_type import make_column_type
+
+column_count = 3
+STORY, HEIGHT, LEVEL = range(column_count)
 
 class ColumnTypes:
 
@@ -21,23 +32,24 @@ class ColumnTypes:
 
 		if not hasattr(obj, "heights"):
 			obj.addProperty(
-                "App::PropertyFloatList",
-                "heights",
-                "column_types",
-            )
+				"App::PropertyFloatList",
+				"heights",
+				"column_types",
+			)
 
-        # if not hasattr(obj, "n"):
-        # 	obj.addProperty(
-        # 		"App::PropertyInteger",
-        # 		"n",
-        # 		"column_types",
-        # 		)
+		if not hasattr(obj, "levels"):
+			obj.addProperty(
+				"App::PropertyFloatList",
+				"levels",
+				"column_types",
+				)
+
 		if not hasattr(obj, "v_scale"):
 			obj.addProperty(
 				"App::PropertyFloat",
-                "v_scale",
-                "column_type",
-                ).v_scale = .25
+				"v_scale",
+				"column_type",
+				).v_scale = .25
 
 		if not hasattr(obj, "childrens_name"):
 			obj.addProperty(
@@ -61,16 +73,17 @@ class ColumnTypes:
 				"Deck",
 				).composite_deck = True
 
-        # if not 
+		# if not 
 
 	def execute(self, obj):
+		print(f"execute of column_type is executed!\nheights = {obj.heights}")
 		col_names = []
 		for prop in self.column_types_prop:
 			ct = make_column_type(prop)
 			col_names.append(ct.Name)
 		obj.columns_names = col_names
 		scale = 1000 * obj.v_scale
-		    # shapes = []
+			# shapes = []
 		childrens_name = []
 		levels = [obj.base_level * scale]
 		real_level = [obj.base_level]
@@ -99,6 +112,8 @@ class ColumnTypes:
 			rec.ViewObject.ShapeColor = (0.68,0.95,0.95)
 			f.Group.append(rec.Name)
 			childrens_name.append(rec.Name)
+
+		obj.levels = real_level
 
 		old_childrens_name = obj.childrens_name
 		obj.childrens_name = childrens_name
@@ -145,23 +160,161 @@ class ViewProviderColumnTypes:
 	def claimChildren(self):
 		children=[FreeCAD.ActiveDocument.getObject(name) for name in self.Object.childrens_name]
 		return children
-    	
+
+	def getIcon(self):
+		return join(dirname(abspath(__file__)),"Resources", "icons","column_types")
+		
 
 
 
 def make_columns_types(prop=[], heights=None, base_level=None):
-	
-	obj = FreeCAD.ActiveDocument.addObject("App::DocumentObjectGroupPython","Columns")
+	FreeCADGui.activateWorkbench("ArchWorkbench")
+	obj = FreeCAD.ActiveDocument.addObject("App::DocumentObjectGroupPython","Levels")
 	ColumnTypes(obj)
 	ViewProviderColumnTypes(obj.ViewObject)
 	obj.heights = heights
 	obj.base_level = base_level
-	# obj.v_scale = v_scale
 	obj.Proxy.column_types_prop = prop
 	FreeCAD.ActiveDocument.recompute()
 	FreeCAD.ActiveDocument.recompute()
+	FreeCADGui.activeDocument().activeView().viewFront()
+	FreeCADGui.SendMsgToActiveView("ViewFit")
+	return obj
+
+
+class LevelTableModel(QAbstractTableModel):
+
+	def __init__(self):
+		super(LevelTableModel, self).__init__()
+		self.cts = None
+
+	def headerData(self, section, orientation, role=Qt.DisplayRole):
+		if role == Qt.TextAlignmentRole:
+			if orientation == Qt.Horizontal:
+				return int(Qt.AlignLeft | Qt.AlignVCenter)
+			return int(Qt.AlignRight | Qt.AlignVCenter)
+		if role != Qt.DisplayRole:
+			return
+
+		if orientation == Qt.Horizontal:
+			if section == STORY:
+				return "Story"
+			elif section == HEIGHT:
+				return "Height"
+			elif section == LEVEL:
+				return "Level"
+
+	def flags(self, index):
+		if not index.isValid():
+			return Qt.ItemIsEnabled
+		col = index.column()
+		i = index.row()
+		if col == STORY:
+			return Qt.ItemIsEnabled
+		if i != 0 and col == LEVEL:
+			return Qt.ItemIsEnabled
+
+		if i == 0 and col == HEIGHT:
+			return Qt.ItemIsEnabled
+
+		return Qt.ItemFlags(
+			QAbstractTableModel.flags(self, index) |
+			Qt.ItemIsEditable)
+
+	def data(self, index, role=Qt.DisplayRole):
+		if (not index.isValid() or
+				not (0 <= index.row() < len(self.cts.heights) + 1)):
+			return
+		i = index.row()
+		column = index.column()
+
+		if role == Qt.DisplayRole:
+			if column == STORY:
+				if i == 0:
+					return "Base"
+				return f"Story {i}"
+			elif column == HEIGHT:
+				if i == 0:
+					return ""
+				return str(self.cts.heights[i - 1])
+
+			elif column == LEVEL:
+				return str(self.cts.levels[i])
+
+
+
+	def rowCount(self, index=QModelIndex()):
+		if self.cts:
+			return len(self.cts.heights) + 1
+		return 0
+
+	def columnCount(self, index=QModelIndex()):
+		return column_count
+
+	def setData(self, index, value, role=Qt.EditRole):
+		if index.isValid() and 0 <= index.row() < len(self.cts.heights) + 1:
+			column = index.column()
+			i = index.row()
+			if column == HEIGHT:
+				self.cts.heights = self.cts.heights[:i - 1] + [float(value)] + self.cts.heights[i:]
+				self.cts.Proxy.execute(self.cts)
+			elif i == 0 and column == LEVEL:
+				self.cts.base_level = float(value)
+				self.cts.Proxy.execute(self.cts)
+			self.dataChanged.emit(index, index)
+			return True
+		return False
+
+
+	def insertRows(self, position, index=QModelIndex()):
+		self.beginInsertRows(QModelIndex(), position, position)
+		self.cts.heights.insert(position + 1, 3)
+
+
+
+class Ui:
+
+	def __init__(self):
+		self.form = FreeCADGui.PySideUic.loadUi(os.path.join(
+				os.path.dirname(__file__), 'Resources/ui/story.ui')
+			)
+
+	def setupUi(self):
+		self.add_connections()
+		self.model = LevelTableModel()
+		try:
+			self.model.cts = FreeCAD.ActiveDocument.Levels
+		except:
+			self.model.cts = make_columns_types(heights=[], base_level=-1.2)
+		self.form.tableView.setModel(self.model)
+
+
+	def add_connections(self):
+		self.form.addButton.clicked.connect(self.add_story)
+		self.form.removeButton.clicked.connect(self.remove_story)
+
+
+	def add_story(self):
+		self.model.beginResetModel()
+		self.model.cts.heights += [4]
+		self.model.cts.Proxy.execute(self.model.cts)
+		self.model.endResetModel()
+
+	def remove_story(self):
+		print("I love zahra")
+
+def create_levels():
+	ui = Ui()
+	FreeCADGui.Control.showDialog(ui)
+	if ui.setupUi():
+		FreeCADGui.Control.closeDialog(ui)
+	FreeCAD.ActiveDocument.recompute()
+
+
+
 	
 
-make_columns_types(heights=[4, 3.2, 3.2, 3.2, 3.3, 5], base_level=-1.2)
+if __name__ == '__main__':
+	create_levels()
 
 

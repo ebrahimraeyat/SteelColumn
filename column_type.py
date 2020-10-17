@@ -26,6 +26,13 @@ class ColumnType:
                 )
             obj.size = ["14", "16", "18", "20", "22", "24", "27", "30"]
 
+        if not hasattr(obj, "N"):
+            obj.addProperty(
+                "App::PropertyInteger",
+                "N",
+                "column_type",
+                )
+
         if not hasattr(obj, "pa_baz"):
             obj.addProperty(
                 "App::PropertyBool",
@@ -649,7 +656,7 @@ class ViewProviderColumnType:
         return children
 
     def getIcon(self):
-        return join(dirname(abspath(__file__)),"icons","column_types")
+        return join(dirname(abspath(__file__)),"Resources", "icons","column_types")
 
 
 
@@ -674,6 +681,15 @@ def make_column_type(heights, sections_name, size=16, pa_baz=False, base_level=0
     # FreeCAD.ActiveDocument.recompute()
     # FreeCAD.ActiveDocument.recompute()
     return obj
+
+
+class Ui:
+    def __init__(self):
+        self.form = FreeCADGui.PySideUic.loadUi(os.path.join(
+            os.path.dirname(__file__), 'Resources/ui/columns.ui'))
+
+    def setupUi(self):
+        pass
 
 if __name__ == '__main__':
     make_column_type([4, 3.2, 3.2, 3.2, 3.3, 5], ['2IPE30PL200x8w200x5', '2IPE30PL200x8w200x5', '2IPE30PL200x8','2IPE30PL200x8', '2IPE30w200x5', '2IPE30w200x5'], base_level=-1.2, pos=(0, 0), size="30")

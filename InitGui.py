@@ -1,10 +1,10 @@
-import SteelColumnGui
+
 
 
 class SteelColumnWorkbench(Workbench):
 
 	def __init__(self):
-		rel_path = "Mod/SteelColumn/icons/column_types"
+		rel_path = "Mod/SteelColumn/Resources/icons/column_types"
 		path = FreeCAD.ConfigGet("AppHomePath") + rel_path
 		import os
 		if not os.path.exists(path):
@@ -15,8 +15,8 @@ class SteelColumnWorkbench(Workbench):
 
 	def Initialize(self):
 		from PySide2 import QtCore, QtGui
-		command_list = ["Dxf",
-						]
+		import SteelColumnGui
+		command_list = SteelColumnGui.steel_column_commands
 				
 		self.appendToolbar(str(QtCore.QT_TRANSLATE_NOOP(
 			"SteelColumn",
