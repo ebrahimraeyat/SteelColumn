@@ -8,7 +8,6 @@ from PySide2.QtCore import *
 from PySide2.QtGui import *
 import sys, os
 from os.path import join, dirname, abspath
-
 from column_type import make_column_type
 
 column_count = 3
@@ -262,6 +261,8 @@ class LevelTableModel(QAbstractTableModel):
 				self.cts.base_level = float(value)
 				self.cts.Proxy.execute(self.cts)
 			self.dataChanged.emit(index, index)
+			FreeCAD.ActiveDocument.recompute()
+			FreeCAD.ActiveDocument.recompute()
 			return True
 		return False
 
@@ -299,9 +300,31 @@ class Ui:
 		self.model.cts.heights += [4]
 		self.model.cts.Proxy.execute(self.model.cts)
 		self.model.endResetModel()
+		FreeCAD.ActiveDocument.recompute()
+		FreeCAD.ActiveDocument.recompute()
 
 	def remove_story(self):
-		print("I love zahra")
+		indexes = self.form.tableView.selectionModel().selectedRows()
+		# indexes = [QPersistentModelIndex(index) for index in self.form.tableView.selectionModel().selectedRows()]
+		# if not indexes:
+		# 	QMessageBox.warning(self, "Steel Column - selection", f"you have to select entire row/rows, not only cell/cells.")
+		# 	return
+		# if (QMessageBox.question(self, "Steel Column - Remove",
+		# 						 (f"Remove selected Levels?"),
+		# 						 QMessageBox.Yes | QMessageBox.No) ==
+		# 		QMessageBox.No):
+		# 	return
+
+		for index in indexes:
+			i = index.row()
+			if i == 0:
+				return
+			self.model.beginResetModel()
+			self.model.cts.heights = self.model.cts.heights[:i-1] + self.model.cts.heights[i:]
+			self.model.cts.Proxy.execute(self.model.cts)
+			self.model.endResetModel()
+			FreeCAD.ActiveDocument.recompute()
+			FreeCAD.ActiveDocument.recompute()
 
 def create_levels():
 	ui = Ui()

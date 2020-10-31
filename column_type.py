@@ -3,11 +3,20 @@ import FreeCAD, FreeCADGui
 import Part
 import Arch
 import Draft
+
+from PySide2.QtWidgets import *
+from PySide2.QtCore import *
+from PySide2.QtGui import *
+
 from FreeCAD import Base
 from section import make_section, create_ipe, create_plate, create_neshiman
 from columnTypeFunctions import (decompose_section_name, remove_obj,
                                 find_empty_levels, find_nardebani_plate_levels)
 from os.path import join, dirname, abspath
+
+
+LEVEL = 0
+
 
 class ColumnType:
     def __init__(self, obj):
@@ -683,30 +692,158 @@ def make_column_type(heights, sections_name, size=16, pa_baz=False, base_level=0
     return obj
 
 
+class ColumnTableModel(QAbstractTableModel):
+
+    def __init__(self):
+        super().__init__()
+        self.Levels = None
+
+    def headerData(self, section, orientation, role=Qt.DisplayRole):
+        if role == Qt.TextAlignmentRole:
+            if orientation == Qt.Horizontal:
+                return int(Qt.AlignLeft | Qt.AlignVCenter)
+            return int(Qt.AlignRight | Qt.AlignVCenter)
+        if role != Qt.DisplayRole:
+            return
+
+        if orientation == Qt.Vertical:
+            if section == LEVEL:
+                return "Level"
+            else:
+                col_name = self.Levels.columns_names[section-1]
+                return col_name
+        if orientation == Qt.Horizontal:
+            lev = self.Level.levels[section]
+            return str(lev)
+
+    def flags(self, index):
+        if not index.isValid():
+            return Qt.ItemIsEnabled
+        col = index.column()
+        i = index.row()
+        if col == LEVEL:
+            return Qt.ItemIsEnabled
+
+        return Qt.ItemFlags(
+            QAbstractTableModel.flags(self, index) |
+            Qt.ItemIsEditable)
+
+    def data(self, index, role=Qt.DisplayRole):
+        if (not index.isValid() or
+                not (0 <= index.row() < len(self.cts.heights) + 1)):
+            return
+        # i = index.row()
+        # column = index.column()
+
+        # if role == Qt.DisplayRole:
+        #     if column == STORY:
+        #         if i == 0:
+        #             return "Base"
+        #         return f"Story {i}"
+        #     elif column == HEIGHT:
+        #         if i == 0:
+        #             return ""
+        #         return str(self.cts.heights[i - 1])
+
+        #     elif column == LEVEL:
+        #         return str(self.cts.levels[i])
+
+
+
+    def rowCount(self, index=QModelIndex()):
+        if self.Levels:
+            return len(self.Levels.heights)
+        return 0
+
+    def columnCount(self, index=QModelIndex()):
+        return len(self.Levels.columns_names) + 1
+
+    # def setData(self, index, value, role=Qt.EditRole):
+    #     if index.isValid() and 0 <= index.row() < len(self.cts.heights) + 1:
+    #         column = index.column()
+    #         i = index.row()
+    #         if column == HEIGHT:
+    #             self.cts.heights = self.cts.heights[:i - 1] + [float(value)] + self.cts.heights[i:]
+    #             self.cts.Proxy.execute(self.cts)
+    #         elif i == 0 and column == LEVEL:
+    #             self.cts.base_level = float(value)
+    #             self.cts.Proxy.execute(self.cts)
+    #         self.dataChanged.emit(index, index)
+    #         FreeCAD.ActiveDocument.recompute()
+    #         FreeCAD.ActiveDocument.recompute()
+    #         return True
+    #     return False
+
+
+    # def insertRows(self, position, index=QModelIndex()):
+    #     self.beginInsertRows(QModelIndex(), position, position)
+    #     self.cts.heights.insert(position + 1, 3)
+
+
+
 class Ui:
     def __init__(self):
         self.form = FreeCADGui.PySideUic.loadUi(os.path.join(
-            os.path.dirname(__file__), 'Resources/ui/columns.ui'))
+            os.path.dirname(__file__), 'Resources/ui/story.ui'))
 
     def setupUi(self):
-        pass
+        self.add_connections()
+        self.model = ColumnTableModel()
+        try:
+            self.model.Levels = FreeCAD.ActiveDocument.Levels
+        except:
+            pass
+        self.form.tableView.setModel(self.model)
 
-if __name__ == '__main__':
-    make_column_type([4, 3.2, 3.2, 3.2, 3.3, 5], ['2IPE30PL200x8w200x5', '2IPE30PL200x8w200x5', '2IPE30PL200x8','2IPE30PL200x8', '2IPE30w200x5', '2IPE30w200x5'], base_level=-1.2, pos=(0, 0), size="30")
-    make_column_type([4, 3.2, 3.2, 3.2, 3.3, 5], ['2IPE24PL300x8w200x5', '2IPE24PL250x8w200x5', '2IPE24PL200x8','2IPE24PL200x8', '2IPE24w150x5', '2IPE24w150x5'], base_level=-1.2, pos=(2000, 0), size="24", pa_baz=True)
-    make_column_type([4, 3.2, 3.2, 3.2, 3.3, 5], ['2IPE24w200x5', '2IPE24PL250x8w200x5', '2IPE24PL200x8','2IPE24PL200x8', '2IPE24w150x5', '2IPE24w150x5'], base_level=-1.2, pos=(4000, 0), size="24", pa_baz=True)
-    make_column_type([4, 3.2, 3.2, 3.2, 3.3, 5], ['2IPE14', '2IPE14', '2IPE14', '2IPE14', '2IPE14', '2IPE14'], base_level=-1.2, pos=(6000, 0), size="14", pa_baz=True)
-    make_column_type([4, 3.2, 3.2, 3.2, 3.3, 5, 3, 3], ['3IPE18PL310x10w140x8', '3IPE18PL310x10', '3IPE18PL310x8', '3IPE18PL230x8', '3IPE18PL230x6', '3IPE18', '3IPE18', '3IPE18'], base_level=-1.2, pos=(8000, 0), size="18", pa_baz=True)
-    make_column_type([4, 3.2, 3.2, 3.2, 3.3, 5, 3, 3], ['2IPE18PL310x10w140x8', '2IPE18PL310x10', '2IPE18PL310x8', '2IPE18PL230x8', '2IPE18PL230x6', '2IPE18PL230x6', '2IPE18PL230x6', '2IPE18PL230x6w140x8'], base_level=-1.2, pos=(10000, 0), size="18", pa_baz=True)
+    def add_connections(self):
+        self.form.addButton.clicked.connect(self.add_column)
 
-    make_column_type([4, 3.2, 3.2, 3.2, 3.3, 5, 3, 3], ['2IPE18PL310x10w140x8', '3IPE18PL310x10', '3IPE18', '2IPE18', '3IPE18PL310x10', '2IPE18', '2IPE18', '2IPE18'], base_level=-1.2, pos=(12000, 0), size="18", pa_baz=True)
-    
-    make_column_type([4, 3.2, 3.2, 3.2, 3.3, 5, 3, 3], ['2IPE14', '3IPE14PL170x6', '3IPE14PL170x6', '3IPE14', '3IPE14', '3IPE14', '3IPE14', '3IPE14'], base_level=-1.2, pos=(14000, 0), size="14", pa_baz=True)
-    make_column_type([4, 3.2, 3.2, 3.2, 3.3, 5, 3, 3], ['2IPE14', '2IPE14', '2IPE14', '2IPE14', '2IPE14', '3IPE14', '3IPE14', '3IPE14'], base_level=-1.2, pos=(16000, 0), size="14", pa_baz=True)
-    make_column_type([4, 3.2, 3.2, 3.2, 3.3, 5, 3, 3], ['2IPE16', '3IPE16PL280x8', '3IPE16PL280x8', '3IPE16PL280x8', '3IPE16PL200x6', '3IPE16PL200x6', '3IPE16', '3IPE16'], base_level=-1.2, pos=(18000, 0), size="16", pa_baz=True)
+    def add_column(self):
+        self.model.beginResetModel()
+        heights = self.model.Levels.heights
+        sections_name = "2IPE16" * len(heights)
+        base_level = self.model.Levels.base_level
+        last_column_name = self.model.Levels.columns_names[-1]
+        last_col = FreeCAD.ActiveDocument.getObject(last_column_name)
+        extend_length = last_col.extend_length
+        x = last_col.Placement.Base.x + 2000
+        pos = (x, 0)
+        col = make_column_type(heights, sections_name, base_level=base_level,
+            extend_length=extend_length, pos=pos)
+        col_names = self.model.Levels.columns_names
+        col_names.append(col.Name)
+        self.model.Levels.columns_names = col_names
+        self.model.Levels.Proxy.execute(self.model.Levels)
+        self.model.endResetModel()
+        FreeCAD.ActiveDocument.recompute()
+        FreeCAD.ActiveDocument.recompute()
+
+
+def create_columns():
+    ui = Ui()
+    FreeCADGui.Control.showDialog(ui)
+    if ui.setupUi():
+        FreeCADGui.Control.closeDialog(ui)
     FreeCAD.ActiveDocument.recompute()
 
-    FreeCADGui.ActiveDocument.ActiveView.viewFront()
-    FreeCADGui.SendMsgToActiveView("ViewFit")
+
+if __name__ == '__main__':
+    create_columns()
+    # make_column_type([4, 3.2, 3.2, 3.2, 3.3, 5], ['2IPE30PL200x8w200x5', '2IPE30PL200x8w200x5', '2IPE30PL200x8','2IPE30PL200x8', '2IPE30w200x5', '2IPE30w200x5'], base_level=-1.2, pos=(0, 0), size="30")
+    # make_column_type([4, 3.2, 3.2, 3.2, 3.3, 5], ['2IPE24PL300x8w200x5', '2IPE24PL250x8w200x5', '2IPE24PL200x8','2IPE24PL200x8', '2IPE24w150x5', '2IPE24w150x5'], base_level=-1.2, pos=(2000, 0), size="24", pa_baz=True)
+    # make_column_type([4, 3.2, 3.2, 3.2, 3.3, 5], ['2IPE24w200x5', '2IPE24PL250x8w200x5', '2IPE24PL200x8','2IPE24PL200x8', '2IPE24w150x5', '2IPE24w150x5'], base_level=-1.2, pos=(4000, 0), size="24", pa_baz=True)
+    # make_column_type([4, 3.2, 3.2, 3.2, 3.3, 5], ['2IPE14', '2IPE14', '2IPE14', '2IPE14', '2IPE14', '2IPE14'], base_level=-1.2, pos=(6000, 0), size="14", pa_baz=True)
+    # make_column_type([4, 3.2, 3.2, 3.2, 3.3, 5, 3, 3], ['3IPE18PL310x10w140x8', '3IPE18PL310x10', '3IPE18PL310x8', '3IPE18PL230x8', '3IPE18PL230x6', '3IPE18', '3IPE18', '3IPE18'], base_level=-1.2, pos=(8000, 0), size="18", pa_baz=True)
+    # make_column_type([4, 3.2, 3.2, 3.2, 3.3, 5, 3, 3], ['2IPE18PL310x10w140x8', '2IPE18PL310x10', '2IPE18PL310x8', '2IPE18PL230x8', '2IPE18PL230x6', '2IPE18PL230x6', '2IPE18PL230x6', '2IPE18PL230x6w140x8'], base_level=-1.2, pos=(10000, 0), size="18", pa_baz=True)
+
+    # make_column_type([4, 3.2, 3.2, 3.2, 3.3, 5, 3, 3], ['2IPE18PL310x10w140x8', '3IPE18PL310x10', '3IPE18', '2IPE18', '3IPE18PL310x10', '2IPE18', '2IPE18', '2IPE18'], base_level=-1.2, pos=(12000, 0), size="18", pa_baz=True)
+    
+    # make_column_type([4, 3.2, 3.2, 3.2, 3.3, 5, 3, 3], ['2IPE14', '3IPE14PL170x6', '3IPE14PL170x6', '3IPE14', '3IPE14', '3IPE14', '3IPE14', '3IPE14'], base_level=-1.2, pos=(14000, 0), size="14", pa_baz=True)
+    # make_column_type([4, 3.2, 3.2, 3.2, 3.3, 5, 3, 3], ['2IPE14', '2IPE14', '2IPE14', '2IPE14', '2IPE14', '3IPE14', '3IPE14', '3IPE14'], base_level=-1.2, pos=(16000, 0), size="14", pa_baz=True)
+    # make_column_type([4, 3.2, 3.2, 3.2, 3.3, 5, 3, 3], ['2IPE16', '3IPE16PL280x8', '3IPE16PL280x8', '3IPE16PL280x8', '3IPE16PL200x6', '3IPE16PL200x6', '3IPE16', '3IPE16'], base_level=-1.2, pos=(18000, 0), size="16", pa_baz=True)
+    # FreeCAD.ActiveDocument.recompute()
+
+    # FreeCADGui.ActiveDocument.ActiveView.viewFront()
+    # FreeCADGui.SendMsgToActiveView("ViewFit")
 
 
