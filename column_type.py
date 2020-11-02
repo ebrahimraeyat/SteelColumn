@@ -890,11 +890,11 @@ class Ui:
 
 def create_columns():
     ui = Ui()
-    ui.setupUi()
-    ui.form.exec_()
-    # FreeCADGui.Control.showDialog(ui)
-    # if ui.setupUi():
-    #     FreeCADGui.Control.closeDialog(ui)
+    # ui.setupUi()
+    # ui.form.exec_()
+    FreeCADGui.Control.showDialog(ui)
+    if ui.setupUi():
+        FreeCADGui.Control.closeDialog(ui)
     FreeCAD.ActiveDocument.recompute()
 
 

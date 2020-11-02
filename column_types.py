@@ -73,20 +73,8 @@ class ColumnTypes:
 				"Deck",
 				).composite_deck = True
 
-		# if not hasattr(obj, "sections_name"):
-		# 	obj.addProperty(
-		# 		"App::PropertyStringList",
-		# 		"sections_name",
-		# 		"column_types")
-
-		# if not 
 
 	def execute(self, obj):
-		# col_names = []
-		# for prop in self.column_types_prop:
-		# 	ct = make_column_type(prop)
-		# 	col_names.append(ct.Name)
-		# obj.columns_names = col_names
 		scale = 1000 * obj.v_scale
 			# shapes = []
 		childrens_name = []
@@ -148,7 +136,6 @@ class ColumnTypes:
 			text = f"+ {level:.2f}"
 		else:
 			text =  f"- {abs(level):.2f}"
-		print(text)
 		return text
 
 
@@ -195,6 +182,7 @@ def make_columns_types(prop=[], heights=None, base_level=None):
 	FreeCAD.ActiveDocument.recompute()
 	FreeCADGui.activeDocument().activeView().viewFront()
 	FreeCADGui.SendMsgToActiveView("ViewFit")
+	FreeCADGui.activateWorkbench("SteelColumnWorkbench")
 	return obj
 
 
@@ -319,18 +307,10 @@ class Ui:
 		self.model.endResetModel()
 		FreeCAD.ActiveDocument.recompute()
 		FreeCAD.ActiveDocument.recompute()
+		FreeCADGui.SendMsgToActiveView("ViewFit")
 
 	def remove_story(self):
 		indexes = self.form.tableView.selectionModel().selectedRows()
-		# indexes = [QPersistentModelIndex(index) for index in self.form.tableView.selectionModel().selectedRows()]
-		# if not indexes:
-		# 	QMessageBox.warning(self, "Steel Column - selection", f"you have to select entire row/rows, not only cell/cells.")
-		# 	return
-		# if (QMessageBox.question(self, "Steel Column - Remove",
-		# 						 (f"Remove selected Levels?"),
-		# 						 QMessageBox.Yes | QMessageBox.No) ==
-		# 		QMessageBox.No):
-		# 	return
 
 		for index in indexes:
 			i = index.row()
@@ -353,9 +333,6 @@ def create_levels():
 		FreeCADGui.Control.closeDialog(ui)
 	FreeCAD.ActiveDocument.recompute()
 
-
-
-	
 
 if __name__ == '__main__':
 	create_levels()

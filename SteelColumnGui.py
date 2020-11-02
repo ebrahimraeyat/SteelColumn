@@ -76,7 +76,7 @@ class Columns:
         ToolTip = QtCore.QT_TRANSLATE_NOOP(
             "Levels",
             "Creates Levels")
-        rel_path = "Mod/SteelColumn/Resources/icons/Levels.svg"
+        rel_path = "Mod/SteelColumn/Resources/icons/column"
         path = FreeCAD.getHomePath() + rel_path
         import os
         if not os.path.exists(path):
@@ -90,7 +90,7 @@ class Columns:
         column_type.create_columns()
 
     def IsActive(self):
-        return True if FreeCADGui.ActiveDocument else False
+        return True if FreeCADGui.ActiveDocument.Levels else False
 
 
 
@@ -151,7 +151,7 @@ FreeCADGui.addCommand("steel_column_levels", Levels())
 FreeCADGui.addCommand("steel_column_columns", Columns())
 
 steel_column_commands = [
-    "Dxf",
     "steel_column_levels",
     "steel_column_columns",
+    "Dxf",
     ]
