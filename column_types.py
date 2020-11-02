@@ -2,6 +2,7 @@ import FreeCAD
 import FreeCADGui
 import Arch
 import Draft
+import ArchComponent
 
 from PySide2.QtWidgets import *
 from PySide2.QtCore import *
@@ -47,7 +48,7 @@ class ColumnTypes:
 			obj.addProperty(
 				"App::PropertyFloat",
 				"v_scale",
-				"column_type",
+				"column_types",
 				).v_scale = .25
 
 		if not hasattr(obj, "childrens_name"):
@@ -72,15 +73,20 @@ class ColumnTypes:
 				"Deck",
 				).composite_deck = True
 
+		# if not hasattr(obj, "sections_name"):
+		# 	obj.addProperty(
+		# 		"App::PropertyStringList",
+		# 		"sections_name",
+		# 		"column_types")
+
 		# if not 
 
 	def execute(self, obj):
-		print(f"execute of column_type is executed!\nheights = {obj.heights}")
-		col_names = []
-		for prop in self.column_types_prop:
-			ct = make_column_type(prop)
-			col_names.append(ct.Name)
-		obj.columns_names = col_names
+		# col_names = []
+		# for prop in self.column_types_prop:
+		# 	ct = make_column_type(prop)
+		# 	col_names.append(ct.Name)
+		# obj.columns_names = col_names
 		scale = 1000 * obj.v_scale
 			# shapes = []
 		childrens_name = []
@@ -131,6 +137,8 @@ class ColumnTypes:
 				o.base_level = obj.base_level
 			if hasattr(o, "composite_deck") and o.composite_deck != obj.composite_deck:
 				o.composite_deck = obj.composite_deck
+			if hasattr(o, "heights") and o.heights == obj.heights:
+				o.heights = obj.heights
 
 
 	def get_level_text(self, level):
@@ -147,10 +155,11 @@ class ColumnTypes:
 			
 
 
-class ViewProviderColumnTypes:
+class ViewProviderColumnTypes(ArchComponent.ViewProviderComponent):
 
-	def __init__(self, obj):
-		obj.Proxy = self
+	def __init__(self, vobj):
+		super().__init__(vobj)
+		vobj.Proxy = self
 
 	def attach(self, vobj):
 		self.ViewObject = vobj
@@ -162,6 +171,14 @@ class ViewProviderColumnTypes:
 
 	def getIcon(self):
 		return join(dirname(abspath(__file__)),"Resources", "icons","column_types")
+
+	def setEdit(self, vobj, mode=0):
+		create_levels()
+		return True
+
+	def unsetEdit(self, vobj, mode):
+		FreeCADGui.Control.closeDialog()
+		return
 		
 
 
@@ -325,6 +342,9 @@ class Ui:
 			self.model.endResetModel()
 			FreeCAD.ActiveDocument.recompute()
 			FreeCAD.ActiveDocument.recompute()
+
+	def getStandardButtons(self):
+		return int(QDialogButtonBox.Close)
 
 def create_levels():
 	ui = Ui()

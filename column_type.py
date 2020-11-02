@@ -12,10 +12,11 @@ from FreeCAD import Base
 from section import make_section, create_ipe, create_plate, create_neshiman
 from columnTypeFunctions import (decompose_section_name, remove_obj,
                                 find_empty_levels, find_nardebani_plate_levels)
+import os
 from os.path import join, dirname, abspath
 
-
-LEVEL = 0
+extra_row = 5
+SIZE, PABAZ, BASELEVEL, EXTENDLENGTH, XPOS = range(extra_row)
 
 
 class ColumnType:
@@ -587,8 +588,6 @@ class ColumnType:
         obj.childrens_name = childrens_name
 
     
-
-
     def make_profile(self, obj):
         shapes = []
         edges = []
@@ -668,9 +667,6 @@ class ViewProviderColumnType:
         return join(dirname(abspath(__file__)),"Resources", "icons","column_types")
 
 
-
-
-
 def make_column_type(heights, sections_name, size=16, pa_baz=False, base_level=0, extend_length=.8, pos=(0, 0)):
     '''
 
@@ -684,11 +680,8 @@ def make_column_type(heights, sections_name, size=16, pa_baz=False, base_level=0
     obj.extend_length = extend_length
     position = FreeCAD.Vector(pos[0], pos[1], 0)
     obj.Placement.Base = position
-    # obj.n = str(n)
     obj.size = str(size)
     obj.pa_baz = pa_baz
-    # FreeCAD.ActiveDocument.recompute()
-    # FreeCAD.ActiveDocument.recompute()
     return obj
 
 
@@ -697,31 +690,40 @@ class ColumnTableModel(QAbstractTableModel):
     def __init__(self):
         super().__init__()
         self.Levels = None
+        self.sections_name = set()
 
     def headerData(self, section, orientation, role=Qt.DisplayRole):
         if role == Qt.TextAlignmentRole:
             if orientation == Qt.Horizontal:
-                return int(Qt.AlignLeft | Qt.AlignVCenter)
+                return int(Qt.AlignHCenter | Qt.AlignVCenter)
             return int(Qt.AlignRight | Qt.AlignVCenter)
         if role != Qt.DisplayRole:
             return
 
-        if orientation == Qt.Vertical:
-            if section == LEVEL:
-                return "Level"
-            else:
-                col_name = self.Levels.columns_names[section-1]
-                return col_name
         if orientation == Qt.Horizontal:
-            lev = self.Level.levels[section]
-            return str(lev)
+            if len(self.Levels.columns_names) >= 1:
+                return f"C{section + 1}"
+            else:
+                return
+        if orientation == Qt.Vertical:
+            no_of_story = len(self.Levels.heights)
+            if section == no_of_story + SIZE:
+                return "IPE"
+            if section == no_of_story + PABAZ:
+                return "Pa_Baz"
+            if section == no_of_story + BASELEVEL:
+                return "Base_Level"
+            if section == no_of_story + EXTENDLENGTH:
+                return "Extend_Length"
+            if section == no_of_story + XPOS:
+                return "x_pos"
+            if section == 0:
+                return "Base"
+            else:
+                return f"Story {section}"
 
     def flags(self, index):
         if not index.isValid():
-            return Qt.ItemIsEnabled
-        col = index.column()
-        i = index.row()
-        if col == LEVEL:
             return Qt.ItemIsEnabled
 
         return Qt.ItemFlags(
@@ -729,62 +731,121 @@ class ColumnTableModel(QAbstractTableModel):
             Qt.ItemIsEditable)
 
     def data(self, index, role=Qt.DisplayRole):
-        if (not index.isValid() or
-                not (0 <= index.row() < len(self.cts.heights) + 1)):
+        if not index.isValid():
+            # or
+            #     not (0 <= index.row() < len(self.cts.heights) + 1)):
             return
-        # i = index.row()
-        # column = index.column()
-
-        # if role == Qt.DisplayRole:
-        #     if column == STORY:
-        #         if i == 0:
-        #             return "Base"
-        #         return f"Story {i}"
-        #     elif column == HEIGHT:
-        #         if i == 0:
-        #             return ""
-        #         return str(self.cts.heights[i - 1])
-
-        #     elif column == LEVEL:
-        #         return str(self.cts.levels[i])
-
+        row = index.row()
+        col = index.column()
+        name = self.Levels.columns_names[col]
+        col_obj = FreeCAD.ActiveDocument.getObject(name)
+        no_of_story = len(self.Levels.heights)
+        if row == no_of_story + SIZE:
+            return str(col_obj.size)
+        elif row == no_of_story + PABAZ:
+            return "Yes" if col_obj.pa_baz else "No"
+        elif row == no_of_story + BASELEVEL:
+            return str(col_obj.base_level)
+        elif row == no_of_story + EXTENDLENGTH:
+            return str(col_obj.extend_length)
+        elif row == no_of_story + XPOS:
+            return str(col_obj.Placement.Base.x)
+        else:
+            section_name = col_obj.sections_name[row]
+            self.sections_name.add(section_name)
+            return section_name
 
 
     def rowCount(self, index=QModelIndex()):
         if self.Levels:
-            return len(self.Levels.heights)
+            return len(self.Levels.heights) + extra_row
         return 0
 
     def columnCount(self, index=QModelIndex()):
-        return len(self.Levels.columns_names) + 1
+        return len(self.Levels.columns_names)
 
-    # def setData(self, index, value, role=Qt.EditRole):
-    #     if index.isValid() and 0 <= index.row() < len(self.cts.heights) + 1:
-    #         column = index.column()
-    #         i = index.row()
-    #         if column == HEIGHT:
-    #             self.cts.heights = self.cts.heights[:i - 1] + [float(value)] + self.cts.heights[i:]
-    #             self.cts.Proxy.execute(self.cts)
-    #         elif i == 0 and column == LEVEL:
-    #             self.cts.base_level = float(value)
-    #             self.cts.Proxy.execute(self.cts)
-    #         self.dataChanged.emit(index, index)
-    #         FreeCAD.ActiveDocument.recompute()
-    #         FreeCAD.ActiveDocument.recompute()
-    #         return True
-    #     return False
+    def setData(self, index, value, role=Qt.EditRole):
+        if index.isValid():
+            col = index.column()
+            row = index.row()
+            column_name = self.Levels.columns_names[col]
+            col_obj = FreeCAD.ActiveDocument.getObject(column_name)
+            no_of_story = len(self.Levels.heights)
+            if row == no_of_story + SIZE:
+                col_obj.size = value
+            elif row == no_of_story + PABAZ:
+                if value == "Yes":
+                    col_obj.pa_baz = True
+                else:
+                    col_obj.pa_baz = False
+            elif row == no_of_story + BASELEVEL:
+                col_obj.base_level = float(value)
+            elif row == no_of_story + EXTENDLENGTH:
+                col_obj.extend_length = float(value)
+            elif row == no_of_story + XPOS:
+                col_obj.Placement.Base.x = int(value)
+            else:
+                sections_name = col_obj.sections_name
+                sections_name[row] = str(value)
+                col_obj.sections_name = sections_name
+                self.sections_name.add(str(value))
+            FreeCAD.ActiveDocument.recompute()
+            FreeCAD.ActiveDocument.recompute()
+            return True
+        return False
 
 
-    # def insertRows(self, position, index=QModelIndex()):
-    #     self.beginInsertRows(QModelIndex(), position, position)
-    #     self.cts.heights.insert(position + 1, 3)
+class ColumnDelegate(QItemDelegate):
+
+    def __init__(self, parent=None):
+        super().__init__(parent)
+
+    def createEditor(self, parent, option, index):
+        row = index.row()
+        no_of_story = len(index.model().Levels.heights)
+        if row == no_of_story + SIZE:
+            combobox = QComboBox(parent)
+            combobox.addItems(['14', '16', '18', '20', '22', '24', '27', '30'])
+            return combobox
+        elif row == no_of_story + PABAZ:
+            combobox = QComboBox(parent)
+            combobox.addItems(["Yes", "No"])
+            return combobox
+        # elif row == no_of_story + BASELEVEL:
+        #     col_obj.base_level = float(value)
+        # elif row == no_of_story + EXTENDLENGTH:
+        #     col_obj.extend_length = float(value)
+        # elif row == no_of_story + XPOS:
+        #     col_obj.Placement.Base.x = int(value)
+        elif row <= no_of_story:
+            combobox = QComboBox(parent)
+            combobox.addItems(sorted(index.model().sections_name))
+            combobox.setEditable(True)
+            return combobox
+        else:
+            return QItemDelegate.createEditor(self, parent, option, index)
+
+    # def setEditorData(self, editor, index):
+    #     editor.setValue()
+
+    def setModelData(self, editor, model, index):
+        row = index.row()
+        no_of_story = len(index.model().Levels.heights)
+        if row in (no_of_story + BASELEVEL, no_of_story + EXTENDLENGTH, no_of_story + XPOS):
+            QItemDelegate.setModelData(self, editor, model, index)
+        else:
+            model.setData(index, editor.currentText())
+
+    def sizeHint(self, option, index):
+        fm = option.fontMetrics
+        return QSize(fm.width("2IPE14PL200X10W200X10"), fm.height())
 
 
 
 class Ui:
     def __init__(self):
         self.form = FreeCADGui.PySideUic.loadUi(os.path.join(
-            os.path.dirname(__file__), 'Resources/ui/story.ui'))
+            os.path.dirname(__file__), 'Resources/ui/column.ui'))
 
     def setupUi(self):
         self.add_connections()
@@ -794,6 +855,7 @@ class Ui:
         except:
             pass
         self.form.tableView.setModel(self.model)
+        self.form.tableView.setItemDelegate(ColumnDelegate(self.form))
 
     def add_connections(self):
         self.form.addButton.clicked.connect(self.add_column)
@@ -801,29 +863,38 @@ class Ui:
     def add_column(self):
         self.model.beginResetModel()
         heights = self.model.Levels.heights
-        sections_name = "2IPE16" * len(heights)
+        sections_name = ["2IPE16"] * len(heights)
         base_level = self.model.Levels.base_level
-        last_column_name = self.model.Levels.columns_names[-1]
-        last_col = FreeCAD.ActiveDocument.getObject(last_column_name)
-        extend_length = last_col.extend_length
-        x = last_col.Placement.Base.x + 2000
+        dx = self.form.deltax.value()
+        if len(self.model.Levels.columns_names) >= 1:
+            last_column_name = self.model.Levels.columns_names[-1]
+            last_col = FreeCAD.ActiveDocument.getObject(last_column_name)
+        #     extend_length = last_col.extend_length
+            x = last_col.Placement.Base.x + dx * 1000
+        else:
+        #     extend_length = .8
+            x = 0
+        extend_length = self.form.extend_length.value()
         pos = (x, 0)
+        pa_baz = self.form.pa_baz.isChecked()
         col = make_column_type(heights, sections_name, base_level=base_level,
-            extend_length=extend_length, pos=pos)
+            extend_length=extend_length, pos=pos, pa_baz=pa_baz)
         col_names = self.model.Levels.columns_names
         col_names.append(col.Name)
         self.model.Levels.columns_names = col_names
         self.model.Levels.Proxy.execute(self.model.Levels)
+        FreeCAD.ActiveDocument.recompute()
+        FreeCAD.ActiveDocument.recompute()
         self.model.endResetModel()
-        FreeCAD.ActiveDocument.recompute()
-        FreeCAD.ActiveDocument.recompute()
 
 
 def create_columns():
     ui = Ui()
-    FreeCADGui.Control.showDialog(ui)
-    if ui.setupUi():
-        FreeCADGui.Control.closeDialog(ui)
+    ui.setupUi()
+    ui.form.exec_()
+    # FreeCADGui.Control.showDialog(ui)
+    # if ui.setupUi():
+    #     FreeCADGui.Control.closeDialog(ui)
     FreeCAD.ActiveDocument.recompute()
 
 
