@@ -80,15 +80,15 @@ def add_section_edges_to_dxf(ct, dxfattribs, block, z, scale):
 			del(dxfattribs['yscale'])
 
 
-def add_leader_for_connection_ipe(name, dxfattribs, block, scale):
+def add_leader_for_connection_ipe(name, dxfattribs, block, view_scale, obj_scale):
 	o = FreeCAD.ActiveDocument.getObject(name)
 	center_of_mass = o.Shape.CenterOfMass
-	y =  center_of_mass.z * scale + 50 * scale
-	x1 = center_of_mass.x * scale
-	x2 = x1 + 450 * scale
+	y =  center_of_mass.z * view_scale + 50 * view_scale
+	x1 = center_of_mass.x * view_scale
+	x2 = x1 + 450 * view_scale
 	block.add_blockref("juyuy", (x1, y), dxfattribs={
-        'xscale': scale,
-        'yscale': scale},
+        'xscale': view_scale,
+        'yscale': view_scale},
         )
 	size = int(o.Base.Shape.BoundBox.YLength)
 	block.add_text(f"IPE{size}",
@@ -96,8 +96,9 @@ def add_leader_for_connection_ipe(name, dxfattribs, block, scale):
 					(x2, y),
 					align="BOTTOM_RIGHT"
 					)
-	y =  (center_of_mass.z + 40) * scale
-	block.add_text("L=100 cm",
+	y =  (center_of_mass.z + 40) * view_scale
+	h = int(o.Height.Value / 10 / obj_scale)
+	block.add_text(f"L={h} cm",
 					dxfattribs=dxfattribs).set_pos(
 					(x2, y),
 					align="TOP_RIGHT"
@@ -279,6 +280,7 @@ def export_to_dxf(filename, hidden_edges=False, View="Flange"):
 				{"layer": "connection_ipe", "color": 6, "height": text_height, 'style': 'ROMANT'},
 				msp,
 				view.Scale,
+				ct.v_scale,
 				)
 
 		add_levels_to_dxf(

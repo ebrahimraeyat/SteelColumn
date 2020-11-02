@@ -15,8 +15,8 @@ from columnTypeFunctions import (decompose_section_name, remove_obj,
 import os
 from os.path import join, dirname, abspath
 
-extra_row = 5
-SIZE, PABAZ, BASELEVEL, EXTENDLENGTH, XPOS = range(extra_row)
+extra_row = 6
+SIZE, PABAZ, BASELEVEL, EXTENDLENGTH, CONNECTIONIPELENGTH, XPOS = range(extra_row)
 
 
 class ColumnType:
@@ -224,6 +224,13 @@ class ColumnType:
                 "nardebani_plate_size",
                 "column_type",
                 )
+
+        if not hasattr(obj, "connection_ipe_length"):
+            obj.addProperty(
+                "App::PropertyFloat",
+                "connection_ipe_length",
+                "column_type",
+                ).connection_ipe_length = 1.0
 
         
 
@@ -434,7 +441,7 @@ class ColumnType:
                     connection_ipe_section_obj.Shape = connection_ipe_section
                     connection_ipe_obj = Arch.makeStructure(connection_ipe_section_obj)
                     connection_ipe_obj.IfcType = "Column"
-                    connection_ipe_obj.Height = 1 * scale
+                    connection_ipe_obj.Height = obj.connection_ipe_length * scale
                     connection_ipe_obj.ViewObject.ShapeColor = (.80, 0.0, 0.0)
                     connection_ipes.append(connection_ipe_obj.Name)
                 # for lev in levels[1:]:
@@ -667,7 +674,8 @@ class ViewProviderColumnType:
         return join(dirname(abspath(__file__)),"Resources", "icons","column.png")
 
 
-def make_column_type(heights, sections_name, size=16, pa_baz=False, base_level=0, extend_length=.8, pos=(0, 0)):
+def make_column_type(heights, sections_name, size=16, pa_baz=False, base_level=0, extend_length=.8,
+        connection_ipe_length=1, pos=(0, 0)):
     '''
 
     '''
@@ -682,6 +690,7 @@ def make_column_type(heights, sections_name, size=16, pa_baz=False, base_level=0
     obj.Placement.Base = position
     obj.size = str(size)
     obj.pa_baz = pa_baz
+    obj.connection_ipe_length = connection_ipe_length
     return obj
 
 
@@ -712,11 +721,13 @@ class ColumnTableModel(QAbstractTableModel):
             if section == no_of_story + PABAZ:
                 return "Pa_Baz"
             if section == no_of_story + BASELEVEL:
-                return "Base_Level"
+                return "Base_Level (m)"
             if section == no_of_story + EXTENDLENGTH:
-                return "Extend_Length"
+                return "Extend_Length (m)"
             if section == no_of_story + XPOS:
-                return "x_pos"
+                return "x_pos (mm)"
+            if section == no_of_story + CONNECTIONIPELENGTH:
+                return "conn_ipe_len (m)"
             if section == 0:
                 return "Base"
             else:
@@ -748,6 +759,8 @@ class ColumnTableModel(QAbstractTableModel):
             return str(col_obj.base_level)
         elif row == no_of_story + EXTENDLENGTH:
             return str(col_obj.extend_length)
+        if row == no_of_story + CONNECTIONIPELENGTH:
+            return str(col_obj.connection_ipe_length)
         elif row == no_of_story + XPOS:
             return str(col_obj.Placement.Base.x)
         else:
@@ -782,6 +795,8 @@ class ColumnTableModel(QAbstractTableModel):
                 col_obj.base_level = float(value)
             elif row == no_of_story + EXTENDLENGTH:
                 col_obj.extend_length = float(value)
+            elif row == no_of_story + CONNECTIONIPELENGTH:
+                col_obj.connection_ipe_length = float(value)
             elif row == no_of_story + XPOS:
                 col_obj.Placement.Base.x = int(value)
             else:
@@ -831,7 +846,8 @@ class ColumnDelegate(QItemDelegate):
     def setModelData(self, editor, model, index):
         row = index.row()
         no_of_story = len(index.model().Levels.heights)
-        if row in (no_of_story + BASELEVEL, no_of_story + EXTENDLENGTH, no_of_story + XPOS):
+        if row in (no_of_story + BASELEVEL, no_of_story + EXTENDLENGTH,
+            no_of_story + CONNECTIONIPELENGTH, no_of_story + XPOS):
             QItemDelegate.setModelData(self, editor, model, index)
         else:
             model.setData(index, editor.currentText())
@@ -875,10 +891,11 @@ class Ui:
         #     extend_length = .8
             x = 0
         extend_length = self.form.extend_length.value()
+        connection_ipe_length = self.form.connection_ipe_length.value()
         pos = (x, 0)
         pa_baz = self.form.pa_baz.isChecked()
         col = make_column_type(heights, sections_name, base_level=base_level,
-            extend_length=extend_length, pos=pos, pa_baz=pa_baz)
+            extend_length=extend_length, pos=pos, pa_baz=pa_baz, connection_ipe_length=connection_ipe_length)
         col_names = self.model.Levels.columns_names
         col_names.append(col.Name)
         self.model.Levels.columns_names = col_names
