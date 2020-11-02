@@ -303,6 +303,8 @@ class Ui:
 	def add_story(self):
 		self.model.beginResetModel()
 		self.model.cts.heights += [4]
+		self.model.cts.v_scale = self.form.v_scale.value()
+		self.model.cts.composite_deck = self.form.composite_deck.isChecked()
 		self.model.cts.Proxy.execute(self.model.cts)
 		self.model.endResetModel()
 		FreeCAD.ActiveDocument.recompute()
