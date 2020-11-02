@@ -43,6 +43,7 @@ class ColumnTypes:
 				"levels",
 				"column_types",
 				)
+			obj.setEditorMode("levels", 1)
 
 		if not hasattr(obj, "v_scale"):
 			obj.addProperty(
@@ -57,6 +58,7 @@ class ColumnTypes:
 				"childrens_name",
 				"column_types",
 				)
+			obj.setEditorMode("childrens_name", 1)
 
 
 		if not hasattr(obj, "columns_names"):
@@ -65,6 +67,7 @@ class ColumnTypes:
 				"columns_names",
 				"column_types",
 				)
+			obj.setEditorMode("columns_names", 1)
 
 		if not hasattr(obj, "composite_deck"):
 			obj.addProperty(
