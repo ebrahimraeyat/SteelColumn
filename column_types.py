@@ -157,7 +157,7 @@ class ViewProviderColumnTypes(ArchComponent.ViewProviderComponent):
 		return children
 
 	def getIcon(self):
-		return join(dirname(abspath(__file__)),"Resources", "icons","column_types")
+		return join(dirname(abspath(__file__)),"Resources", "icons","Levels.svg")
 
 	def setEdit(self, vobj, mode=0):
 		create_levels()

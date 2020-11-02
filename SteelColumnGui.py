@@ -72,11 +72,11 @@ class Columns:
     def GetResources(self):
         MenuText = QtCore.QT_TRANSLATE_NOOP(
             "Levels",
-            "Creates Levels")
+            "Creates Columns")
         ToolTip = QtCore.QT_TRANSLATE_NOOP(
             "Levels",
-            "Creates Levels")
-        rel_path = "Mod/SteelColumn/Resources/icons/column"
+            "Creates Columns")
+        rel_path = "Mod/SteelColumn/Resources/icons/column.png"
         path = FreeCAD.getHomePath() + rel_path
         import os
         if not os.path.exists(path):
