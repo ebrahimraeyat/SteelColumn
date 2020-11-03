@@ -889,7 +889,8 @@ class Ui:
     def add_column(self):
         self.model.beginResetModel()
         heights = self.model.Levels.heights
-        sections_name = ["2IPE16"] * len(heights)
+        ipe_size = int(self.form.ipe_size.currentText())
+        sections_name = [f"2IPE{ipe_size}"] * len(heights)
         base_level = self.model.Levels.base_level
         dx = self.form.deltax.value()
         if len(self.model.Levels.columns_names) >= 1:
@@ -905,8 +906,8 @@ class Ui:
         connection_ipes_above_length = self.form.connection_ipe_above.value()
         pos = (x, 0)
         pa_baz = self.form.pa_baz.isChecked()
-        col = make_column_type(heights, sections_name, base_level=base_level,
-            extend_length=extend_length, pos=pos, pa_baz=pa_baz,
+        col = make_column_type(heights, sections_name, size=ipe_size,
+            base_level=base_level, extend_length=extend_length, pos=pos, pa_baz=pa_baz,
             connection_ipe_lengths=[connection_ipe_length, connection_ipes_above_length])
         col_names = self.model.Levels.columns_names
         col_names.append(col.Name)
