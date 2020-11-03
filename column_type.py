@@ -530,7 +530,7 @@ class ColumnType:
 
         #  insert BASE PLATE
         h = .02 * scale
-        length = 700
+        length = 400
         base_plate = Arch.makeStructure(length=length, width=length, height= h, name='BasePlate')
         base_plate.IfcType = "Plate"
         x = obj.Placement.Base.x - length / 2
