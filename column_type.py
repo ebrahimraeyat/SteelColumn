@@ -15,8 +15,8 @@ from columnTypeFunctions import (decompose_section_name, remove_obj,
 import os
 from os.path import join, dirname, abspath
 
-extra_row = 6
-SIZE, PABAZ, BASELEVEL, EXTENDLENGTH, CONNECTIONIPELENGTH, XPOS = range(extra_row)
+extra_row = 7
+SIZE, PABAZ, BASELEVEL, EXTENDLENGTH, CONNECTIONIPELENGTH, CONNECTIONIPEABOVE, XPOS = range(extra_row)
 
 
 class ColumnType:
@@ -225,12 +225,12 @@ class ColumnType:
                 "column_type",
                 )
 
-        if not hasattr(obj, "connection_ipe_length"):
+        if not hasattr(obj, "connection_ipe_lengths"):
             obj.addProperty(
-                "App::PropertyFloat",
-                "connection_ipe_length",
-                "column_type",
-                ).connection_ipe_length = 1.0
+                "App::PropertyFloatList",
+                "connection_ipe_lengths",
+                "Connection_IPE",
+                ).connection_ipe_lengths = [1., 0.5]
 
         
 
@@ -434,14 +434,15 @@ class ColumnType:
                 for lev in empty_levels:
                     connection_ipe_section.Placement.Base = IPE.Placement.Base
                     if lev != simplify_levels[0]:
-                        connection_ipe_section.Placement.Base.z = lev - .5 * scale
+                        below_len = obj.connection_ipe_lengths[0] - obj.connection_ipe_lengths[1]
+                        connection_ipe_section.Placement.Base.z = lev - below_len * scale
 
 
                     connection_ipe_section_obj = FreeCAD.ActiveDocument.addObject("Part::FeaturePython", "ipe")
                     connection_ipe_section_obj.Shape = connection_ipe_section
                     connection_ipe_obj = Arch.makeStructure(connection_ipe_section_obj)
                     connection_ipe_obj.IfcType = "Column"
-                    connection_ipe_obj.Height = obj.connection_ipe_length * scale
+                    connection_ipe_obj.Height = obj.connection_ipe_lengths[0] * scale
                     connection_ipe_obj.ViewObject.ShapeColor = (.80, 0.0, 0.0)
                     connection_ipes.append(connection_ipe_obj.Name)
                 # for lev in levels[1:]:
@@ -675,7 +676,7 @@ class ViewProviderColumnType:
 
 
 def make_column_type(heights, sections_name, size=16, pa_baz=False, base_level=0, extend_length=.8,
-        connection_ipe_length=1, pos=(0, 0)):
+        connection_ipe_lengths=[1., .5], pos=(0, 0)):
     '''
 
     '''
@@ -690,7 +691,7 @@ def make_column_type(heights, sections_name, size=16, pa_baz=False, base_level=0
     obj.Placement.Base = position
     obj.size = str(size)
     obj.pa_baz = pa_baz
-    obj.connection_ipe_length = connection_ipe_length
+    obj.connection_ipe_lengths = connection_ipe_lengths
     return obj
 
 
@@ -728,6 +729,8 @@ class ColumnTableModel(QAbstractTableModel):
                 return "x_pos (mm)"
             if section == no_of_story + CONNECTIONIPELENGTH:
                 return "conn_ipe_len (m)"
+            if section == no_of_story + CONNECTIONIPEABOVE:
+                return "conn_ipe_above (m)"
             if section == 0:
                 return "Base"
             else:
@@ -760,7 +763,9 @@ class ColumnTableModel(QAbstractTableModel):
         elif row == no_of_story + EXTENDLENGTH:
             return str(col_obj.extend_length)
         if row == no_of_story + CONNECTIONIPELENGTH:
-            return str(col_obj.connection_ipe_length)
+            return str(col_obj.connection_ipe_lengths[0])
+        if row == no_of_story + CONNECTIONIPEABOVE:
+            return str(col_obj.connection_ipe_lengths[1])
         elif row == no_of_story + XPOS:
             return str(col_obj.Placement.Base.x)
         else:
@@ -796,7 +801,11 @@ class ColumnTableModel(QAbstractTableModel):
             elif row == no_of_story + EXTENDLENGTH:
                 col_obj.extend_length = float(value)
             elif row == no_of_story + CONNECTIONIPELENGTH:
-                col_obj.connection_ipe_length = float(value)
+                lens = [float(value), col_obj.connection_ipe_lengths[1]]
+                col_obj.connection_ipe_lengths = lens
+            elif row == no_of_story + CONNECTIONIPEABOVE:
+                lens = [col_obj.connection_ipe_lengths[0], float(value)]
+                col_obj.connection_ipe_lengths = lens
             elif row == no_of_story + XPOS:
                 col_obj.Placement.Base.x = int(value)
             else:
@@ -847,7 +856,8 @@ class ColumnDelegate(QItemDelegate):
         row = index.row()
         no_of_story = len(index.model().Levels.heights)
         if row in (no_of_story + BASELEVEL, no_of_story + EXTENDLENGTH,
-            no_of_story + CONNECTIONIPELENGTH, no_of_story + XPOS):
+            no_of_story + CONNECTIONIPELENGTH, no_of_story + CONNECTIONIPEABOVE,
+            no_of_story + XPOS):
             QItemDelegate.setModelData(self, editor, model, index)
         else:
             model.setData(index, editor.currentText())
@@ -892,10 +902,12 @@ class Ui:
             x = 0
         extend_length = self.form.extend_length.value()
         connection_ipe_length = self.form.connection_ipe_length.value()
+        connection_ipes_above_length = self.form.connection_ipe_above.value()
         pos = (x, 0)
         pa_baz = self.form.pa_baz.isChecked()
         col = make_column_type(heights, sections_name, base_level=base_level,
-            extend_length=extend_length, pos=pos, pa_baz=pa_baz, connection_ipe_length=connection_ipe_length)
+            extend_length=extend_length, pos=pos, pa_baz=pa_baz,
+            connection_ipe_lengths=[connection_ipe_length, connection_ipes_above_length])
         col_names = self.model.Levels.columns_names
         col_names.append(col.Name)
         self.model.Levels.columns_names = col_names
