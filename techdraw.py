@@ -121,14 +121,17 @@ def add_levels_to_dxf(ct, dxfattribs, block, scale):
 	x = o.Shape.BoundBox.XMin * scale
 	x1 = x - 500 * scale
 	x2 = x - 100 * scale
+	t = "T.O.B" if ct.composite_deck else "B.O.B"
 	for i, name in enumerate(ct.neshimans_name):
 		o = FreeCAD.ActiveDocument.getObject(name)
 		y1 = o.Shape.BoundBox.ZMax * scale
+		if not ct.composite_deck:
+			y1 -= 300 * ct.v_scale * scale
 		y2 = y1 + 30 * scale
 		if ct.levels[i + 1] > 0:
-			text = f"T.O.B = +{ct.levels[i + 1] / ct.v_scale / 1000:.2f}"
+			text = f"{t} = +{ct.levels[i + 1] / ct.v_scale / 1000:.2f}"
 		else:
-			text = f"T.O.B = {ct.levels[i + 1] / ct.v_scale / 1000:.2f}"
+			text = f"{t} = {ct.levels[i + 1] / ct.v_scale / 1000:.2f}"
 		add_level_to_dxf(text, x1, x2, y1, y2, dxfattribs, block, scale)
 	# add base level
 	if ct.levels[0] > 0:
