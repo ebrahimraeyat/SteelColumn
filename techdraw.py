@@ -208,7 +208,7 @@ def get_view_direction(View):
 def export_to_dxf(filename, hidden_edges=False, View="Flange"):
 
 	show_hidden_edges = hidden_edges	
-	view_scale = .05
+	view_scale = 1
 	page = FreeCAD.ActiveDocument.addObject('TechDraw::DrawPage', 'Page')
 	FreeCAD.ActiveDocument.addObject('TechDraw::DrawSVGTemplate', 'Template')
 	templateFileSpec = join(dirname(abspath(__file__)),"templates", "A0_Landscape_blank.svg")
@@ -230,8 +230,8 @@ def export_to_dxf(filename, hidden_edges=False, View="Flange"):
 	for i, ct in enumerate(cts, start=1):
 		view = FreeCAD.ActiveDocument.addObject('TechDraw::DrawViewPart','View')
 		view.HardHidden = show_hidden_edges
-		view.ViewObject.LineWidth = .005
-		view.ViewObject.HiddenWidth = .001
+		# view.ViewObject.LineWidth = .005
+		# view.ViewObject.HiddenWidth = .001
 		view.Direction = get_view_direction(View)
 
 		names = [ct.ipe_name] + ct.flang_plates_name + ct.base_plate_name + ct.nardebani_names + \
