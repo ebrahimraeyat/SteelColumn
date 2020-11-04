@@ -177,8 +177,8 @@ def create_ipe(width, height, tw, tf):
 def create_neshiman(width, height, tw, tf):
     s1, _ = create_ipe(width, height, tw, tf)
 
-    tf2 = height / 10
-    tw2 = 10
+    tf2 = 10
+    tw2 = tf2
 
     s2, _ = create_plate(1.7 * width, tf2)
     s2.Placement.Base.y -= height / 2 + tf2 / 2
