@@ -15,6 +15,8 @@ from columnTypeFunctions import (decompose_section_name, remove_obj,
 import os
 from os.path import join, dirname, abspath
 
+import config
+
 extra_row = 7
 SIZE, PABAZ, BASELEVEL, EXTENDLENGTH, CONNECTIONIPELENGTH, CONNECTIONIPEABOVE, XPOS = range(extra_row)
 
@@ -882,9 +884,26 @@ class Ui:
             pass
         self.form.tableView.setModel(self.model)
         self.form.tableView.setItemDelegate(ColumnDelegate(self.form))
+        json_file=os.path.join(FreeCAD.getUserAppDataDir(), 'column.json')
+        self.load_config(json_file)
 
     def add_connections(self):
         self.form.addButton.clicked.connect(self.add_column)
+
+    def load_config(self, json_file):
+        if os.path.exists(json_file):
+            config.load(self.form, json_file)
+
+    def accept(self):
+        self.save_config()
+        FreeCADGui.Control.closeDialog(self)
+
+    def reject(self):
+        self.accept()
+
+    def save_config(self):
+        json_file = os.path.join(FreeCAD.getUserAppDataDir(), 'column.json')
+        config.save(self.form, json_file)
 
     def add_column(self):
         self.model.beginResetModel()
