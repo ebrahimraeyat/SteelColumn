@@ -646,29 +646,6 @@ class ViewProviderColumnType:
         self.ViewObject = vobj
         self.Object = vobj.Object
 
-    def updateData(self, fp, prop):
-        ''' If a property of the handled feature has changed we have the chance to handle this here '''
-        return
-
-    def getDisplayModes(self, obj):
-        ''' Return a list of display modes. '''
-        modes = []
-        return modes
-
-    def getDefaultDisplayMode(self):
-        ''' Return the name of the default display mode. It must be defined in getDisplayModes. '''
-        return "Shaded"
-
-    def setDisplayMode(self, mode):
-        ''' Map the display mode defined in attach with those defined in getDisplayModes.
-        Since they have the same names nothing needs to be done. This method is optional.
-        '''
-        return mode
-
-    def onChanged(self, vp, prop):
-        ''' Print the name of the property that has changed '''
-        FreeCAD.Console.PrintMessage("Change View property: " + str(prop) + "\n")
-
     def claimChildren(self):
         children=[FreeCAD.ActiveDocument.getObject(name) for name in self.Object.childrens_name]
         return children
@@ -893,6 +870,7 @@ class Ui:
 
     def add_connections(self):
         self.form.addButton.clicked.connect(self.add_column)
+        self.form.removeButton.clicked.connect(self.remove_column)
 
     def load_config(self, json_file):
         if os.path.exists(json_file):
@@ -936,6 +914,44 @@ class Ui:
         col_names.append(col.Name)
         self.model.Levels.columns_names = col_names
         self.model.Levels.Proxy.execute(self.model.Levels)
+        FreeCAD.ActiveDocument.recompute()
+        FreeCAD.ActiveDocument.recompute()
+        self.model.endResetModel()
+
+
+    def remove_column(self):
+        self.model.beginResetModel()
+        indexes = self.form.tableView.selectionModel().selectedColumns()
+        if not indexes:
+            return
+        col_names = self.model.Levels.columns_names
+        x_placements = []
+        for name in col_names:
+            col_obj = FreeCAD.ActiveDocument.getObject(name)
+            x_placements.append(col_obj.Placement.Base.x)
+        print(x_placements)
+        index = indexes[0]
+        i = index.column()
+        col_name = col_names[i]
+        col_obj = FreeCAD.ActiveDocument.getObject(col_name)
+        for name in col_obj.childrens_name:
+            remove_obj(name)
+        col_names.remove(col_name)
+        if len(x_placements) > i + 1:
+            deltax = x_placements[i + 1] - x_placements[i]
+        else:
+            deltax = 0
+        x_placements.remove(x_placements[i])
+        if len(x_placements) > 0:
+            for j, x in enumerate(x_placements[i:]):
+                x_placements[i + j] -= deltax
+
+        FreeCAD.ActiveDocument.removeObject(col_name)
+        self.model.Levels.columns_names = col_names
+        print(x_placements)
+        for i, name in enumerate(col_names):
+            col_obj = FreeCAD.ActiveDocument.getObject(name)
+            col_obj.Placement.Base.x = x_placements[i]
         FreeCAD.ActiveDocument.recompute()
         FreeCAD.ActiveDocument.recompute()
         self.model.endResetModel()
