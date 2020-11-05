@@ -14,9 +14,9 @@ def update():
         return
 
     steel_column_path = os.path.abspath(os.path.join(os.path.dirname(__file__)))
-    user_data_dir = FreeCAD.getUserFreeCADDataDir()
+    user_data_dir = FreeCAD.getUserAppDataDir()
     if not user_data_dir in steel_column_path:
-        mod_path = os.path.join(FreeCAD.getUserFreeCADDataDir(), 'Mod')
+        mod_path = os.path.join(user_data_dir, 'Mod')
         if not os.path.exists(mod_path):
             os.mkdir(mod_path)
         steel_column_path = os.path.join(mod_path, 'SteelColumn')
