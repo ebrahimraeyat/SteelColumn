@@ -877,6 +877,10 @@ class Ui:
 
     def setupUi(self):
         self.add_connections()
+        icon_path = os.path.join(
+            os.path.dirname(__file__), 'Resources/icons/')
+        self.form.addButton.setIcon(QPixmap(icon_path + "add.svg"))
+        self.form.removeButton.setIcon(QPixmap(icon_path + "remove.svg"))
         self.model = ColumnTableModel()
         try:
             self.model.Levels = FreeCAD.ActiveDocument.Levels
