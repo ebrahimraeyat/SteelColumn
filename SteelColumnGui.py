@@ -7,6 +7,7 @@ import os
 import techdraw
 import column_types
 import column_type
+import update
 
 
 # from safe.punch import punchPanel
@@ -93,45 +94,31 @@ class Columns:
         return True if FreeCADGui.ActiveDocument.Levels else False
 
 
+class Update:
 
-# class Copy(DraftTools.Move):
+    def GetResources(self):
+        MenuText = QtCore.QT_TRANSLATE_NOOP(
+            "Update",
+            "Update")
+        ToolTip = QtCore.QT_TRANSLATE_NOOP(
+            "Update",
+            "Update Steel Column WorkBench")
+        rel_path = "Mod/SteelColumn/Resources/icons/update.png"
+        path = FreeCAD.getHomePath() + rel_path
+        import os
+        if not os.path.exists(path):
+            path =  FreeCAD.getUserAppDataDir() + rel_path
+        return {'Pixmap': path,
+                'MenuText': MenuText,
+                'ToolTip': ToolTip}
 
-#     def __init__(self):
-#         DraftTools.Move.__init__(self)
 
-#     def GetResources(self):
+    def  Activated(self):
+        update.update()
 
-#         return {'Pixmap': os.path.join(os.path.dirname(__file__), "images", "copy.svg"),
-#                 'MenuText': QtCore.QT_TRANSLATE_NOOP("Copy", "Copy"),
-#                 'ToolTip': QtCore.QT_TRANSLATE_NOOP("TogglePanels", "Copies selected objects to another location"),
-#                 'Accel': 'C,P'}
+    def IsActive(self):
+        return True
 
-
-# class CivilPdf:
-#     def Activated(self):
-#         from safe.punch import pdf
-#         doc = FreeCAD.ActiveDocument
-#         filename = get_save_filename('.pdf')
-#         pdf.createPdf(doc, filename)
-
-#     def GetResources(self):
-#         MenuText = QtCore.QT_TRANSLATE_NOOP(
-#             "Civil_pdf",
-#             "Export to pdf")
-#         ToolTip = QtCore.QT_TRANSLATE_NOOP(
-#             "Civil_pdf",
-#             "export to pdf")
-#         rel_path = "Mod/Civil/safe/punch/icon/pdf.svg"
-#         path = FreeCAD.ConfigGet("AppHomePath") + rel_path
-#         import os
-#         if not os.path.exists(path):
-#             path = FreeCAD.ConfigGet("UserAppData") + rel_path
-#         return {'Pixmap': path,
-#                 'MenuText': MenuText,
-#                 'ToolTip': ToolTip}
-
-#     def IsActive(self):
-#         return not FreeCAD.ActiveDocument is None
 
 
 def get_save_filename(ext):
@@ -146,12 +133,14 @@ def get_save_filename(ext):
     return filename
 
 
-FreeCADGui.addCommand('Dxf', Dxf())
 FreeCADGui.addCommand("steel_column_levels", Levels())
 FreeCADGui.addCommand("steel_column_columns", Columns())
+FreeCADGui.addCommand('steel_column_dxf', Dxf())
+FreeCADGui.addCommand("steel_column_update", Update())
 
 steel_column_commands = [
     "steel_column_levels",
     "steel_column_columns",
-    "Dxf",
+    "steel_column_dxf",
+    "steel_column_update",
     ]
