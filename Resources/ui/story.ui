@@ -6,27 +6,16 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>389</width>
-    <height>438</height>
+    <width>364</width>
+    <height>637</height>
    </rect>
   </property>
   <property name="windowTitle">
    <string>Stories</string>
   </property>
-  <layout class="QVBoxLayout" name="verticalLayout_2">
+  <layout class="QVBoxLayout" name="verticalLayout_3">
    <item>
-    <layout class="QHBoxLayout" name="horizontalLayout_2">
-     <item>
-      <widget class="QPushButton" name="addButton">
-       <property name="text">
-        <string>Add      </string>
-       </property>
-       <property name="icon">
-        <iconset resource="../resource.qrc">
-         <normaloff>:/steelColumn/icons/add.svg</normaloff>:/steelColumn/icons/add.svg</iconset>
-       </property>
-      </widget>
-     </item>
+    <layout class="QHBoxLayout" name="horizontalLayout_3">
      <item>
       <widget class="QPushButton" name="removeButton">
        <property name="text">
@@ -39,57 +28,85 @@
       </widget>
      </item>
      <item>
-      <spacer name="horizontalSpacer">
-       <property name="orientation">
-        <enum>Qt::Horizontal</enum>
+      <widget class="QPushButton" name="addButton">
+       <property name="text">
+        <string>Add      </string>
        </property>
-       <property name="sizeHint" stdset="0">
-        <size>
-         <width>40</width>
-         <height>20</height>
-        </size>
+       <property name="icon">
+        <iconset resource="../resource.qrc">
+         <normaloff>:/steelColumn/icons/add.svg</normaloff>:/steelColumn/icons/add.svg</iconset>
        </property>
-      </spacer>
+      </widget>
+     </item>
+    </layout>
+   </item>
+   <item>
+    <layout class="QHBoxLayout" name="horizontalLayout">
+     <item>
+      <layout class="QVBoxLayout" name="verticalLayout_2">
+       <item>
+        <widget class="QLabel" name="label_2">
+         <property name="text">
+          <string>Height</string>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QLabel" name="label_4">
+         <property name="text">
+          <string>Vertical Scale</string>
+         </property>
+        </widget>
+       </item>
+      </layout>
      </item>
      <item>
       <layout class="QVBoxLayout" name="verticalLayout">
        <item>
-        <layout class="QHBoxLayout" name="horizontalLayout">
-         <item>
-          <widget class="QLabel" name="label">
-           <property name="text">
-            <string>Vertical Scale:</string>
-           </property>
-          </widget>
-         </item>
-         <item>
-          <widget class="QDoubleSpinBox" name="v_scale">
-           <property name="minimum">
-            <double>0.100000000000000</double>
-           </property>
-           <property name="maximum">
-            <double>1.000000000000000</double>
-           </property>
-           <property name="singleStep">
-            <double>0.050000000000000</double>
-           </property>
-           <property name="value">
-            <double>0.250000000000000</double>
-           </property>
-          </widget>
-         </item>
-        </layout>
+        <widget class="QDoubleSpinBox" name="height_spinbox">
+         <property name="suffix">
+          <string> m</string>
+         </property>
+         <property name="minimum">
+          <double>0.500000000000000</double>
+         </property>
+         <property name="maximum">
+          <double>10.000000000000000</double>
+         </property>
+         <property name="singleStep">
+          <double>0.500000000000000</double>
+         </property>
+         <property name="value">
+          <double>3.500000000000000</double>
+         </property>
+        </widget>
        </item>
        <item>
-        <widget class="QCheckBox" name="composite_deck">
-         <property name="text">
-          <string>composite Deck</string>
+        <widget class="QDoubleSpinBox" name="v_scale">
+         <property name="minimum">
+          <double>0.100000000000000</double>
+         </property>
+         <property name="maximum">
+          <double>1.000000000000000</double>
+         </property>
+         <property name="singleStep">
+          <double>0.050000000000000</double>
+         </property>
+         <property name="value">
+          <double>0.250000000000000</double>
          </property>
         </widget>
        </item>
       </layout>
      </item>
     </layout>
+   </item>
+   <item>
+    <widget class="QCheckBox" name="composite_deck">
+     <property name="text">
+      <string>composite Deck</string>
+     </property>
+    </widget>
    </item>
    <item>
     <widget class="QTableView" name="tableView"/>
