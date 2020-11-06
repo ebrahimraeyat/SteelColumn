@@ -936,13 +936,25 @@ class Ui:
         else:
             x = 0
         extend_length = self.form.extend_length.value()
+        extend_plate_len_above = self.form.extend_plate_len_above.value()
+        extend_plate_len_below = self.form.extend_plate_len_below.value()
+
         connection_ipe_length = self.form.connection_ipe_length.value()
         connection_ipes_above_length = self.form.connection_ipe_above.value()
         pos = (x, 0)
         pa_baz = self.form.pa_baz.isChecked()
-        col = make_column_type(heights, sections_name, size=ipe_size,
-            base_level=base_level, extend_length=extend_length, pos=pos, pa_baz=pa_baz,
-            connection_ipe_lengths=[connection_ipe_length, connection_ipes_above_length])
+        col = make_column_type(
+            heights,
+            sections_name,
+            size=ipe_size,
+            base_level=base_level,
+            extend_length=extend_length,
+            pos=pos,
+            pa_baz=pa_baz,
+            connection_ipe_lengths=[connection_ipe_length, connection_ipes_above_length],
+            extend_plate_len_above=extend_plate_len_above,
+            extend_plate_len_below=extend_plate_len_below
+            )
         col_names = self.model.Levels.columns_names
         col_names.append(col.Name)
         self.model.Levels.columns_names = col_names
