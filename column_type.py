@@ -17,8 +17,9 @@ from os.path import join, dirname, abspath
 
 import config
 
-extra_row = 7
-SIZE, PABAZ, BASELEVEL, EXTENDLENGTH, CONNECTIONIPELENGTH, CONNECTIONIPEABOVE, XPOS = range(extra_row)
+extra_row = 9
+SIZE, PABAZ, BASELEVEL, EXTENDLENGTH, EXTENDPLATEABOVE, EXTENDPLATEBELOW, \
+CONNECTIONIPELENGTH, CONNECTIONIPEABOVE, XPOS = range(extra_row)
 
 
 class ColumnType:
@@ -116,7 +117,21 @@ class ColumnType:
             obj.addProperty(
                 "App::PropertyFloat",
                 "extend_length",
-                "column_type",
+                "extend_lengths",
+                )
+
+        if not hasattr(obj, "extend_plate_len_above"):
+            obj.addProperty(
+                "App::PropertyFloat",
+                "extend_plate_len_above",
+                "extend_lengths",
+                )
+
+        if not hasattr(obj, "extend_plate_len_below"):
+            obj.addProperty(
+                "App::PropertyFloat",
+                "extend_plate_len_below",
+                "extend_lengths",
                 )
 
         if not hasattr(obj, "profile"):
@@ -254,8 +269,8 @@ class ColumnType:
         for i, section_name in enumerate(obj.sections_name):
             if section_name != simplify_sections_name[-1]:
                 simplify_sections_name.append(section_name)
-                simplify_levels.append((levels[i] + obj.extend_length) * scale)
-        simplify_levels.append((levels[-1] + obj.extend_length) * scale)
+                simplify_levels.append(levels[i] * scale)
+        simplify_levels.append(levels[-1] * scale)
 
 
         merge_flang_plates = []
@@ -268,9 +283,9 @@ class ColumnType:
         for i, name in enumerate(simplify_sections_name):
             n, _, flang_plate, web_plate = decompose_section_name(name)
             if flang_plate or (i == len(simplify_sections_name) - 1):
-                extend_button_flang_length = 0
+                extend_button_flang_length = obj.extend_plate_len_above * scale
             else:
-                extend_button_flang_length = -2 * obj.extend_length * scale
+                extend_button_flang_length = -obj.extend_plate_len_below * scale
 
             level = simplify_levels[i + 1] + extend_button_flang_length
             if merge_flang_plates:
@@ -285,9 +300,9 @@ class ColumnType:
             
 
             if web_plate:
-                extend_button_web_length = 0
+                extend_button_web_length = obj.extend_plate_len_above * scale
             else:
-                extend_button_web_length = -2 * obj.extend_length * scale
+                extend_button_web_length = -obj.extend_plate_len_below * scale
 
             level = simplify_levels[i + 1] + extend_button_web_length
             if merge_web_plates:
@@ -302,9 +317,9 @@ class ColumnType:
 
             
             if n == 3 or (i == len(simplify_sections_name) - 1):
-                extend_button_ipe_length = 0
+                extend_button_ipe_length = obj.extend_length * scale
             else:
-                extend_button_ipe_length = -2 * obj.extend_length * scale
+                extend_button_ipe_length = -obj.extend_length * scale
 
             level = simplify_levels[i + 1] + extend_button_ipe_length
             if souble_ipes:
@@ -326,7 +341,7 @@ class ColumnType:
         ipe_section_obj.Shape = Part.makeCompound(ipe_shapes)
         IPE = Arch.makeStructure(ipe_section_obj, name="IPE")
         IPE.IfcType = "Column"
-        h = simplify_levels[-1] - simplify_levels[0]
+        h = simplify_levels[-1] - simplify_levels[0] + obj.extend_length * scale
         IPE.Height = h
         IPE.Placement.Base = FreeCAD.Vector(0, 0, simplify_levels[0]) + obj.Placement.Base
         IPE.ViewObject.ShapeColor = RED
@@ -655,7 +670,7 @@ class ViewProviderColumnType:
 
 
 def make_column_type(heights, sections_name, size=16, pa_baz=False, base_level=0, extend_length=.8,
-        connection_ipe_lengths=[1., .5], pos=(0, 0)):
+    extend_plate_len_above=.8, extend_plate_len_below=.8, connection_ipe_lengths=[1., .5], pos=(0, 0)):
     '''
 
     '''
@@ -666,6 +681,8 @@ def make_column_type(heights, sections_name, size=16, pa_baz=False, base_level=0
     obj.sections_name = sections_name
     obj.base_level = base_level
     obj.extend_length = extend_length
+    obj.extend_plate_len_above = extend_plate_len_above
+    obj.extend_plate_len_below = extend_plate_len_below
     position = FreeCAD.Vector(pos[0], pos[1], 0)
     obj.Placement.Base = position
     obj.size = str(size)
@@ -704,6 +721,10 @@ class ColumnTableModel(QAbstractTableModel):
                 return "Base_Level (m)"
             if section == no_of_story + EXTENDLENGTH:
                 return "Extend_Length (m)"
+            if section == no_of_story + EXTENDPLATEABOVE:
+                return "extend_plate_above (m)"
+            if section == no_of_story + EXTENDPLATEBELOW:
+                return "extend_plate_below (m)"
             if section == no_of_story + XPOS:
                 return "x_pos (mm)"
             if section == no_of_story + CONNECTIONIPELENGTH:
@@ -741,6 +762,10 @@ class ColumnTableModel(QAbstractTableModel):
             return str(col_obj.base_level)
         elif row == no_of_story + EXTENDLENGTH:
             return str(col_obj.extend_length)
+        elif row == no_of_story + EXTENDPLATEABOVE:
+            return str(col_obj.extend_plate_len_above)
+        elif row == no_of_story + EXTENDPLATEBELOW:
+            return str(col_obj.extend_plate_len_below)
         if row == no_of_story + CONNECTIONIPELENGTH:
             return str(col_obj.connection_ipe_lengths[0])
         if row == no_of_story + CONNECTIONIPEABOVE:
@@ -779,6 +804,10 @@ class ColumnTableModel(QAbstractTableModel):
                 col_obj.base_level = float(value)
             elif row == no_of_story + EXTENDLENGTH:
                 col_obj.extend_length = float(value)
+            elif row == no_of_story + EXTENDPLATEABOVE:
+                col_obj.extend_plate_len_above = float(value)
+            elif row == no_of_story + EXTENDPLATEBELOW:
+                col_obj.extend_plate_len_below = float(value)
             elif row == no_of_story + CONNECTIONIPELENGTH:
                 lens = [float(value), col_obj.connection_ipe_lengths[1]]
                 col_obj.connection_ipe_lengths = lens
@@ -834,9 +863,15 @@ class ColumnDelegate(QItemDelegate):
     def setModelData(self, editor, model, index):
         row = index.row()
         no_of_story = len(index.model().Levels.heights)
-        if row in (no_of_story + BASELEVEL, no_of_story + EXTENDLENGTH,
-            no_of_story + CONNECTIONIPELENGTH, no_of_story + CONNECTIONIPEABOVE,
-            no_of_story + XPOS):
+        if row in (
+            no_of_story + BASELEVEL,
+            no_of_story + EXTENDLENGTH,
+            no_of_story + CONNECTIONIPELENGTH,
+            no_of_story + CONNECTIONIPEABOVE,
+            no_of_story + EXTENDPLATEABOVE,
+            no_of_story + XPOS,
+            no_of_story + EXTENDPLATEBELOW,
+            ):
             QItemDelegate.setModelData(self, editor, model, index)
         else:
             model.setData(index, editor.currentText())
@@ -897,10 +932,8 @@ class Ui:
         if len(self.model.Levels.columns_names) >= 1:
             last_column_name = self.model.Levels.columns_names[-1]
             last_col = FreeCAD.ActiveDocument.getObject(last_column_name)
-        #     extend_length = last_col.extend_length
             x = last_col.Placement.Base.x + dx * 1000
         else:
-        #     extend_length = .8
             x = 0
         extend_length = self.form.extend_length.value()
         connection_ipe_length = self.form.connection_ipe_length.value()
