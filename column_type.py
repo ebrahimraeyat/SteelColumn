@@ -394,9 +394,6 @@ class ColumnType:
         else:
             neshiman_base_z = 100 * obj.v_scale * 2
         
-        import ImportGui
-
-
         for i, plate in enumerate(merge_flang_plates):
             if plate:
                 width = plate[0]
@@ -425,22 +422,6 @@ class ColumnType:
                 plb_draw.LengthFwd = h
                 plb_draw.ViewObject.ShapeColor = BLUE
                 front_draw_sources_name.append(plb_draw.Name)
-                # create neshimans
-                # for lev in levels[1:]:
-                #     if merge_flang_levels[i] < lev * scale < merge_flang_levels[i + 1]:
-                #         y = - (d / 2 + height)
-                #         z = lev * scale + neshiman_base_z
-
-                #         document = FreeCAD.ActiveDocument
-                #         current_instances = set(document.findObjects())
-                #         ImportGui.insert(step_file, document.Name)
-                #         new_instances = set(document.findObjects()) - current_instances
-                #         o = new_instances.pop()
-                #         o.Placement.Base = FreeCAD.Vector(0, y, z) + obj.Placement.Base
-                #         o.ViewObject.ShapeColor = (1.0, 1.0, 0.0)
-                #         Draft.scale(o, FreeCAD.Vector(1, 1, obj.v_scale * 2), copy=False)
-                #         neshimans_name.append(o.Name)
-                #         neshiman_levels.append(lev)
 
         nardebani_names = []
         if obj.pa_baz:
@@ -508,24 +489,6 @@ class ColumnType:
                     PLATE.ViewObject.ShapeColor = (0.0, 0.0, 1.0)
                     _obj_ = Draft.make_ortho_array(PLATE, v_z=FreeCAD.Vector(0.0, 0.0, space), n_x=1, n_y=1, n_z=n_z)
                     nardebani_names.append(_obj_.Name)
-
-        # for lev in levels[1:]:
-        #     if lev not in neshiman_levels:
-        #         # if obj.pa_baz:
-        #         #     y = - (d / 2 + height)
-        #         # else:
-        #         y = - d / 2
-        #         z = lev * scale + neshiman_base_z
-        #         document = FreeCAD.ActiveDocument
-        #         current_instances = set(document.findObjects())
-        #         ImportGui.insert(step_file, document.Name)
-        #         new_instances = set(document.findObjects()) - current_instances
-        #         o = new_instances.pop()
-        #         o.Placement.Base = FreeCAD.Vector(0, y, z) + obj.Placement.Base
-        #         o.ViewObject.ShapeColor = (1.0, 1.0, 0.0)
-        #         Draft.scale(o, FreeCAD.Vector(1, 1, obj.v_scale * 2), copy=False)
-        #         neshimans_name.append(o.Name)
-        #         neshiman_levels.append(lev)
 
         web_plates_name = []
         for i, plate in enumerate(merge_web_plates):
