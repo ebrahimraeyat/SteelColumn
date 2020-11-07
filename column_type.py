@@ -315,22 +315,22 @@ class ColumnType:
                 merge_web_plates.append(web_plate)
                 merge_web_levels.append(level)
 
-            
-            if n == 3 or (i == len(simplify_sections_name) - 1):
-                extend_button_ipe_length = obj.extend_length * scale
-            else:
-                extend_button_ipe_length = -obj.extend_length * scale
+            if obj.pa_baz:
+                if n == 3 or (i == len(simplify_sections_name) - 1):
+                    extend_button_ipe_length = obj.extend_length * scale
+                else:
+                    extend_button_ipe_length = -obj.extend_length * scale
 
-            level = simplify_levels[i + 1] + extend_button_ipe_length
-            if souble_ipes:
-                if n != souble_ipes[-1]:
+                level = simplify_levels[i + 1] + extend_button_ipe_length
+                if souble_ipes:
+                    if n != souble_ipes[-1]:
+                        souble_ipes.append(n)
+                        souble_ipe_levels.append(level)
+                    else:
+                        souble_ipe_levels[-1] = level
+                else:
                     souble_ipes.append(n)
                     souble_ipe_levels.append(level)
-                else:
-                    souble_ipe_levels[-1] = level
-            else:
-                souble_ipes.append(n)
-                souble_ipe_levels.append(level)
 
         # create main IPE structures
         ipe_shapes, edges, bf, d, tf, tw, bw, bh, bt, bdist = self.make_profile(obj)
@@ -361,29 +361,30 @@ class ColumnType:
 
         # souble ipe creation
         souble_ipes_name = []
-        souble_ipe_section = ipe.copy()
-        souble_ipe_edge = edge.copy()
-        for i, n in enumerate(souble_ipes):
-            if n == 3:
-                souble_ipe_section.Placement.Base = FreeCAD.Vector(0, 0, souble_ipe_levels[i]) + obj.Placement.Base
-                souble_ipe_section_obj = FreeCAD.ActiveDocument.addObject("Part::FeaturePython", "ipe")
-                souble_ipe_section_obj.Shape = souble_ipe_section
-                souble_ipe_obj = Arch.makeStructure(souble_ipe_section_obj, name="IPE")
-                souble_ipe_obj.IfcType = "Column"
-                h = souble_ipe_levels[i + 1] - souble_ipe_levels[i]
-                souble_ipe_obj.Height = h
-                souble_ipe_obj.ViewObject.ShapeColor = (.80, 0.0, 0.0)
-                souble_ipes_name.append(souble_ipe_obj.Name)
+        if obj.pa_baz:
+            souble_ipe_section = ipe.copy()
+            souble_ipe_edge = edge.copy()
+            for i, n in enumerate(souble_ipes):
+                if n == 3:
+                    souble_ipe_section.Placement.Base = FreeCAD.Vector(0, 0, souble_ipe_levels[i]) + obj.Placement.Base
+                    souble_ipe_section_obj = FreeCAD.ActiveDocument.addObject("Part::FeaturePython", "ipe")
+                    souble_ipe_section_obj.Shape = souble_ipe_section
+                    souble_ipe_obj = Arch.makeStructure(souble_ipe_section_obj, name="IPE")
+                    souble_ipe_obj.IfcType = "Column"
+                    h = souble_ipe_levels[i + 1] - souble_ipe_levels[i]
+                    souble_ipe_obj.Height = h
+                    souble_ipe_obj.ViewObject.ShapeColor = (.80, 0.0, 0.0)
+                    souble_ipes_name.append(souble_ipe_obj.Name)
 
-                souble_ipe_edge.Placement.Base = FreeCAD.Vector(0, 0, souble_ipe_levels[i]) + obj.Placement.Base
-                line = FreeCAD.ActiveDocument.addObject("Part::FeaturePython", "line")
-                line.Shape = souble_ipe_edge
-                souble_ipe_draw = FreeCAD.ActiveDocument.addObject('Part::Extrusion','ipe_draw')
-                souble_ipe_draw.Base = line
-                souble_ipe_draw.Dir = FreeCAD.Vector(0, 0, 1)
-                souble_ipe_draw.LengthFwd = h
-                souble_ipe_draw.ViewObject.ShapeColor = (.80, 0.0, 0.0)
-                front_draw_sources_name.append(souble_ipe_draw.Name)
+                    souble_ipe_edge.Placement.Base = FreeCAD.Vector(0, 0, souble_ipe_levels[i]) + obj.Placement.Base
+                    line = FreeCAD.ActiveDocument.addObject("Part::FeaturePython", "line")
+                    line.Shape = souble_ipe_edge
+                    souble_ipe_draw = FreeCAD.ActiveDocument.addObject('Part::Extrusion','ipe_draw')
+                    souble_ipe_draw.Base = line
+                    souble_ipe_draw.Dir = FreeCAD.Vector(0, 0, 1)
+                    souble_ipe_draw.LengthFwd = h
+                    souble_ipe_draw.ViewObject.ShapeColor = (.80, 0.0, 0.0)
+                    front_draw_sources_name.append(souble_ipe_draw.Name)
 
         flang_plates_name = []
         connection_ipes = []
@@ -442,15 +443,6 @@ class ColumnType:
                     connection_ipe_obj.Height = obj.connection_ipe_lengths[0] * scale
                     connection_ipe_obj.ViewObject.ShapeColor = (.80, 0.0, 0.0)
                     connection_ipes.append(connection_ipe_obj.Name)
-                # for lev in levels[1:]:
-                #     for tmp_level in empty_levels:
-                #         if tmp_level[0] < lev  * scale < tmp_level[1]:
-                #             connection_ipe_section_obj = FreeCAD.ActiveDocument.addObject("Part::FeaturePython", "ipe")
-                #             connection_ipe_section_obj.Shape = connection_ipe_section
-                #             connection_ipe_obj = Arch.makeStructure(connection_ipe_section_obj)
-                #             connection_ipe_obj.Height = 1 * scale
-                #             connection_ipe_obj.ViewObject.ShapeColor = (.80, 0.0, 0.0)
-                #             connection_ipes.append(connection_ipe_obj.Name)
 
 
         # draw plate for pa_baz column (nardebani)
@@ -461,13 +453,6 @@ class ColumnType:
             height = bt
             plate_height = bh * obj.v_scale
             y = (d + height) / 2
-            # flangs_and_ipes = connection_ipes + flang_plates_name
-            # flangs_and_ipes = sorted(flangs_and_ipes, key=lambda name: FreeCAD.ActiveDocument.getObject(name).Base.Shape.BoundBox.ZMin)
-            # for i in range(len(flangs_and_ipes) - 1):
-            #     o1 = FreeCAD.ActiveDocument.getObject(flangs_and_ipes[i])
-            #     o2 = FreeCAD.ActiveDocument.getObject(flangs_and_ipes[i + 1])
-            #     z1 = o1.Base.Shape.BoundBox.ZMax + o1.Height.Value 
-            #     z2 = o2.Base.Shape.BoundBox.ZMin
             for lev in nardebani_levels:
                 z1 = lev[0]
                 z2 = lev[1]
