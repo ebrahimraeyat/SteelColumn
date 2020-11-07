@@ -231,6 +231,7 @@ def export_to_dxf(filename, hidden_edges=False, View="Flange"):
 
 
 	for i, ct in enumerate(cts, start=1):
+		block = doc.blocks.new(name=ct.Name)
 		view = FreeCAD.ActiveDocument.addObject('TechDraw::DrawViewPart','View')
 		view.HardHidden = show_hidden_edges
 		# view.ViewObject.LineWidth = .005
@@ -266,13 +267,13 @@ def export_to_dxf(filename, hidden_edges=False, View="Flange"):
 		# add column type text
 		text_height = 30 * view.Scale
 		x = (ct.Placement.Base.x) * view.Scale
-		msp.add_text(f"C{i}",
+		block.add_text(f"C{i}",
 			dxfattribs = {'color': 6, "height": 2 * text_height, 'style': 'ROMANT'}).set_pos(
 				(x, (zmin_ct - 50) * view.Scale),
 				align="TOP_CENTER",
 				)
 
-		add_section_edges_to_dxf(ct, {'layer':"Section", 'color': 2}, msp, 0, view.Scale)
+		add_section_edges_to_dxf(ct, {'layer':"Section", 'color': 2}, block, 0, view.Scale)
 
 
 
@@ -281,7 +282,7 @@ def export_to_dxf(filename, hidden_edges=False, View="Flange"):
 			add_leader_for_connection_ipe(
 				name,
 				{"layer": "connection_ipe", "color": 6, "height": text_height, 'style': 'ROMANT'},
-				msp,
+				block,
 				view.Scale,
 				ct.v_scale,
 				)
@@ -289,23 +290,26 @@ def export_to_dxf(filename, hidden_edges=False, View="Flange"):
 		add_levels_to_dxf(
 			ct,
 			{"layer": "levels", "color": 6, "height": text_height, 'style': 'ROMANT'},
-			msp,
+			block,
 			view.Scale,
 			)
 		add_nardebani_text_to_dxf(
 			ct,
 			{"layer": "nardebani_text", "color": 6, "height": text_height, 'style': 'ROMANT'},
-			msp,
+			block,
 			view.Scale
 			)
 
 		# block = doc.blocks.new(name = ct.Name)
-		add_edges_to_dxf(visible_edges, {'layer':"COL"}, msp, x, y)
-		add_edges_to_dxf(hidden_edges, {'layer':"COL", "linetype":"DASHED2", "lineweight": 13}, msp, x, y)
+		add_edges_to_dxf(visible_edges, {'layer':"COL"}, block, x, y)
+		add_edges_to_dxf(hidden_edges, {'layer':"COL", "linetype":"DASHED2", "lineweight": 13}, block, x, y)
 
 		FreeCAD.ActiveDocument.removeObject(view.Name)
-		# msp.add_blockref(ct.Name, (x * view.Scale, 0))
-	height = int(len(cts) * 1000 * view_scale)
+		msp.add_blockref(ct.Name, (int(x / 1000) , 0), dxfattribs={
+	        'xscale': .001,
+	        'yscale': .001,
+	        })
+	height = int(len(cts) * view_scale)
 	doc.set_modelspace_vport(height=height, center=(height, int(height/2)))
 	doc.saveas(filename)
 	FreeCAD.ActiveDocument.removeObject(page.Name)
