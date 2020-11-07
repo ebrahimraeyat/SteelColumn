@@ -305,10 +305,7 @@ def export_to_dxf(filename, hidden_edges=False, View="Flange"):
 		add_edges_to_dxf(hidden_edges, {'layer':"COL", "linetype":"DASHED2", "lineweight": 13}, block, x, y)
 
 		FreeCAD.ActiveDocument.removeObject(view.Name)
-		msp.add_blockref(ct.Name, (int(x / 1000) , 0), dxfattribs={
-	        'xscale': .001,
-	        'yscale': .001,
-	        })
+		msp.add_blockref(ct.Name, (0 , 0)).set_scale(.001)
 	height = int(len(cts) * view_scale)
 	doc.set_modelspace_vport(height=height, center=(height, int(height/2)))
 	doc.saveas(filename)
