@@ -425,8 +425,7 @@ class ColumnType:
 
         nardebani_names = []
         if obj.pa_baz:
-            flangs_and_3ipes = flang_plates_name + souble_ipes_name
-            empty_levels = find_empty_levels(flangs_and_3ipes, levels, scale)
+            empty_levels = find_empty_levels(souble_ipes_name, levels, scale)
             if empty_levels:
                 connection_ipe_section = ipe.copy()
                 for lev in empty_levels:
@@ -455,7 +454,8 @@ class ColumnType:
 
 
         # draw plate for pa_baz column (nardebani)
-            nardebani_levels = find_nardebani_plate_levels(connection_ipes, flangs_and_3ipes)
+            connection_flangs_3ipes = connection_ipes + flang_plates_name + souble_ipes_name
+            nardebani_levels = find_nardebani_plate_levels(connection_flangs_3ipes)
             bb = ipe_section_obj.Shape.BoundBox
             width = bw
             height = bt

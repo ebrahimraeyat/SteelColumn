@@ -54,50 +54,24 @@ def find_empty_levels(names, levels, scale):
 
     return sorted(empty_levels)
 
-
-
-def find_nardebani_plate_levels(connection_names, names):
+def find_nardebani_plate_levels(names):
     sort_objects_by_minz = sorted(names, key=lambda name: FreeCAD.ActiveDocument.getObject(name).Base.Shape.BoundBox.ZMin)
     ZMins = [FreeCAD.ActiveDocument.getObject(name).Base.Shape.BoundBox.ZMin for name in sort_objects_by_minz]
-    sort_objects_by_maxz = sorted(names, key=lambda name: FreeCAD.ActiveDocument.getObject(name).Shape.BoundBox.ZMin + FreeCAD.ActiveDocument.getObject(name).Height.Value)
-    ZMaxs = [(FreeCAD.ActiveDocument.getObject(name).Base.Shape.BoundBox.ZMin + FreeCAD.ActiveDocument.getObject(name).Height.Value) for name in sort_objects_by_maxz]
+    ZMaxs = [(FreeCAD.ActiveDocument.getObject(name).Base.Shape.BoundBox.ZMin + FreeCAD.ActiveDocument.getObject(name).Height.Value) for name in sort_objects_by_minz]
     levels = []
-    for i in range(len(connection_names)):
-        o1 = FreeCAD.ActiveDocument.getObject(connection_names[i])
-        zmin1 = o1.Base.Shape.BoundBox.ZMin
-        zmax1 = zmin1 + o1.Height.Value
-
-        if i > 0:
-            pre_o = FreeCAD.ActiveDocument.getObject(connection_names[i - 1])
-            zmax_pre = pre_o.Base.Shape.BoundBox.ZMin + pre_o.Height.Value
-            z_that_less_than_zmin1 = [z for z in ZMaxs if zmax_pre < z < zmin1]
+    zmin = ZMins[0]
+    zmax = ZMaxs[0]
+    for z1, z2 in zip(ZMins[1:], ZMaxs[1:]):
+        if z1 < zmax:
+            zmax = max(zmax, z2)
         else:
-            z_that_less_than_zmin1 = [z for z in ZMaxs if z < zmin1]
-        if z_that_less_than_zmin1:
-            levels.append([max(z_that_less_than_zmin1), zmin1])
-
-        z_that_greater_than_zmax1 = [z for z in ZMins if z > zmax1]
-        if z_that_greater_than_zmax1:
-            if i < len(connection_names) - 1:
-                o2 = FreeCAD.ActiveDocument.getObject(connection_names[i + 1])
-                zmin2 = o2.Base.Shape.BoundBox.ZMin
-                z = min(zmin2, min(z_that_greater_than_zmax1))
-            else:
-                z = min(z_that_greater_than_zmax1)
-            levels.append([zmax1, z])
-        else:
-            if i < len(connection_names) - 1:
-                o2 = FreeCAD.ActiveDocument.getObject(connection_names[i + 1])
-                z = o2.Base.Shape.BoundBox.ZMin
-                levels.append([zmax1, z])
-
-    return levels
-    
-
-
-
-        
-
-
-
-
+            levels.append([zmin, zmax])
+            zmin = z1
+            zmax = max(zmax, z2)
+    levels.append([zmin, zmax])
+    if not levels:
+        return []
+    empty_levels = []
+    for i in range(len(levels) - 1):
+        empty_levels.append([levels[i][1], levels[i + 1][0]])
+    return empty_levels
