@@ -458,9 +458,9 @@ class ColumnType:
                 z2 = lev[1]
                 h = z2 - z1
                 if h > 0:
-                    space = .4 * scale # constant
-                    n_z = int(h // space)
-                    free_space = h - (n_z * space - (space - plate_height))
+                    space = bdist / 1000 * scale
+                    n_z = int(h // space) - 1
+                    free_space = h - ((n_z - 1) * space + plate_height)
                     z1 += free_space / 2
                     plt, _ = create_plate(width, height)
                     plt.Placement.Base = FreeCAD.Vector(0, y, z1) + obj.Placement.Base
