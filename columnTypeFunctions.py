@@ -11,21 +11,21 @@ def decompose_section_name(name):
     name = name.upper()
     n = int(name[0])
     size = int(name[4:6])
-    fi = name.find("PL")
-    wi = name.find("W")
+    fi = name.find("FPL")
+    wi = name.find("WPL")
     if fi != -1:
         if wi == -1:
             flang_plate = name[fi:]
         else:
             flang_plate = name[fi: wi]
-        flang_plate = flang_plate.lstrip("PL")
+        flang_plate = flang_plate.lstrip("FPL")
         flang_plate = flang_plate.split("X")
         flang_plate_dim = [int(i) for i in flang_plate]
     else:
         flang_plate_dim = []
     if wi != -1:
         web_plate = name[wi:]
-        web_plate = web_plate.lstrip("W")
+        web_plate = web_plate.lstrip("WPL")
         web_plate = web_plate.split("X")
         web_plate_dim = [int(i) for i in web_plate]
     else:
