@@ -49,7 +49,7 @@
           <string> m</string>
          </property>
          <property name="minimum">
-          <double>0.300000000000000</double>
+          <double>0.100000000000000</double>
          </property>
          <property name="maximum">
           <double>2.000000000000000</double>
@@ -68,7 +68,7 @@
           <string> m</string>
          </property>
          <property name="minimum">
-          <double>0.500000000000000</double>
+          <double>0.100000000000000</double>
          </property>
          <property name="maximum">
           <double>3.000000000000000</double>
@@ -87,7 +87,7 @@
           <string> m</string>
          </property>
          <property name="minimum">
-          <double>0.200000000000000</double>
+          <double>0.100000000000000</double>
          </property>
          <property name="maximum">
           <double>3.000000000000000</double>
@@ -202,7 +202,7 @@
           <string> m</string>
          </property>
          <property name="minimum">
-          <double>0.300000000000000</double>
+          <double>0.100000000000000</double>
          </property>
          <property name="maximum">
           <double>2.000000000000000</double>
@@ -251,7 +251,7 @@
           <string> m</string>
          </property>
          <property name="minimum">
-          <double>0.300000000000000</double>
+          <double>0.100000000000000</double>
          </property>
          <property name="maximum">
           <double>2.000000000000000</double>
