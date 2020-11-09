@@ -131,16 +131,12 @@ def add_levels_to_dxf(ct, dxfattribs, block, scale):
 		if not ct.composite_deck:
 			y1 -= 300 * ct.v_scale * scale
 		y2 = y1 + 30 * scale
-		if ct.levels[i + 1] > 0:
-			text = f"{t} = +{ct.levels[i + 1] / ct.v_scale / 1000:.2f}"
-		else:
-			text = f"{t} = {ct.levels[i + 1] / ct.v_scale / 1000:.2f}"
+		level = f"{ct.levels[i + 1] / ct.v_scale / 1000:+06.2f}"
+		text = f"{t} = {level}"
 		add_level_to_dxf(text, x1, x2, y1, y2, dxfattribs, block, scale)
 	# add base level
-	if ct.levels[0] > 0:
-		text = f"Base = +{ct.levels[0] / ct.v_scale / 1000:.2f}"
-	else:
-		text = f"Base = {ct.levels[0] / ct.v_scale / 1000:.2f}"
+	level = f"{ct.levels[0] / ct.v_scale / 1000:+06.2f}"
+	text = f"Base = {level}"
 	base_plate = FreeCAD.ActiveDocument.getObject(ct.base_plate_name[0])
 	y1 = base_plate.Shape.BoundBox.ZMax * scale
 	y2 = y1 + 30 * scale 
