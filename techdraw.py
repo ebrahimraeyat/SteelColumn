@@ -154,7 +154,7 @@ def add_nardebani_text_to_dxf(ct, dxfattribs, block, scale):
 		x2 = x - 600 * scale
 		bw, bh, bt, bdist = ct.nardebani_plate_size
 		block.add_text(
-        	f"PL{int(bw)}*{int(bh)}*{int(bt)}@{int(bdist)}",
+        	f"PL{int(bw)}*{int(bh)}*{int(bt)}",
 			dxfattribs = dxfattribs).set_pos(
 			(x2, y),
 			align="BOTTOM_LEFT",
