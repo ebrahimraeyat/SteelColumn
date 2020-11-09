@@ -1,5 +1,8 @@
 from os.path import join, dirname, abspath
 import copy
+import string
+import random
+
 import TechDraw
 import FreeCADGui as Gui
 import FreeCAD
@@ -86,7 +89,7 @@ def add_leader_for_connection_ipe(name, dxfattribs, block, view_scale, obj_scale
 	y =  center_of_mass.z * view_scale + 50 * view_scale
 	x1 = center_of_mass.x * view_scale
 	x2 = x1 + 450 * view_scale
-	block.add_blockref("juyuy", (x1, y), dxfattribs={
+	block.add_blockref("connectionipe", (x1, y), dxfattribs={
         'xscale': view_scale,
         'yscale': view_scale},
         )
@@ -105,7 +108,7 @@ def add_leader_for_connection_ipe(name, dxfattribs, block, view_scale, obj_scale
 					)
 
 def add_level_to_dxf(text, x1, x2, y1, y2, dxfattribs, block, scale):
-	block.add_blockref("kkkkk3", (x2, y1), dxfattribs={
+	block.add_blockref("levelblock", (x2, y1), dxfattribs={
         'xscale': scale,
         'yscale': scale},
         )
@@ -231,7 +234,8 @@ def export_to_dxf(filename, hidden_edges=False, View="Flange"):
 
 
 	for i, ct in enumerate(cts, start=1):
-		block = doc.blocks.new(name=ct.Name)
+		block_name = ''.join(random.choices(string.ascii_letters + string.digits, k=50))
+		block = doc.blocks.new(name=block_name)
 		view = FreeCAD.ActiveDocument.addObject('TechDraw::DrawViewPart','View')
 		view.HardHidden = show_hidden_edges
 		# view.ViewObject.LineWidth = .005
@@ -305,7 +309,7 @@ def export_to_dxf(filename, hidden_edges=False, View="Flange"):
 		add_edges_to_dxf(hidden_edges, {'layer':"COL", "linetype":"DASHED2", "lineweight": 13}, block, x, y)
 
 		FreeCAD.ActiveDocument.removeObject(view.Name)
-		msp.add_blockref(ct.Name, (0 , 0)).set_scale(.001)
+		msp.add_blockref(block_name, (0 , 0)).set_scale(.001)
 	height = int(len(cts) * view_scale)
 	doc.set_modelspace_vport(height=height, center=(height, int(height/2)))
 	doc.saveas(filename)
