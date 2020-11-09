@@ -86,7 +86,7 @@ def add_section_edges_to_dxf(ct, dxfattribs, block, z, scale):
 def add_leader_for_connection_ipe(name, dxfattribs, block, view_scale, obj_scale):
 	o = FreeCAD.ActiveDocument.getObject(name)
 	center_of_mass = o.Shape.CenterOfMass
-	y =  center_of_mass.z * view_scale + 50 * view_scale
+	y =  (o.Shape.BoundBox.ZMin + 20) * view_scale
 	x1 = center_of_mass.x * view_scale
 	x2 = x1 + 450 * view_scale
 	block.add_blockref("connectionipe", (x1, y), dxfattribs={
@@ -99,7 +99,7 @@ def add_leader_for_connection_ipe(name, dxfattribs, block, view_scale, obj_scale
 					(x2, y),
 					align="BOTTOM_RIGHT"
 					)
-	y =  (center_of_mass.z + 40) * view_scale
+	y =  (o.Shape.BoundBox.ZMin + 10) * view_scale
 	h = int(o.Height.Value / 10 / obj_scale)
 	block.add_text(f"L={h} cm",
 					dxfattribs=dxfattribs).set_pos(
@@ -305,7 +305,7 @@ def export_to_dxf(filename, hidden_edges=False, View="Flange"):
 		add_edges_to_dxf(hidden_edges, {'layer':"COL", "linetype":"DASHED2", "lineweight": 13}, block, x, y)
 
 		FreeCAD.ActiveDocument.removeObject(view.Name)
-		msp.add_blockref(block_name, (0 , 0)).set_scale(.005)
+		msp.add_blockref(block_name, (0 , 0)).set_scale(.001)
 	height = int(len(cts) * view_scale)
 	doc.set_modelspace_vport(height=height, center=(height, int(height/2)))
 	doc.saveas(filename)
