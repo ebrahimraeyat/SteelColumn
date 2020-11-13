@@ -46,12 +46,32 @@ def add_section_edges_to_dxf(ct, dxfattribs, block, z, scale):
 						align="TOP_CENTER"
 						)
 		if o.flange_plate_size:
+			o_zmin = bb.ZMin
+			for flange_plate_name in ct.flang_plates_name:
+				flang_plate = FreeCAD.ActiveDocument.getObject(flange_plate_name)
+				flang_plate_bb = flang_plate.Shape.BoundBox
+				zmax, zmin = flang_plate_bb.ZMax, flang_plate_bb.ZMin
+				flang_plate_height = flang_plate.Height
+				if zmin < o_zmin < zmax:
+					h = int(flang_plate_height.Value / ct.v_scale)
+					break
 			bf, tf = o.flange_plate_size
 			y = bb.ZMax * scale + z + 20 * scale
-			block.add_text(f"2PL{bf}*{tf}",
+			block.add_text(f"2PL{h}*{bf}*{tf}",
 						dxfattribs=dxfattribs_text).set_pos(
 						(x, y),
 						align="BOTTOM_CENTER"
+						)
+			x = flang_plate_bb.Center.x * scale
+			block.add_blockref("nardebani", (x, y), dxfattribs={
+		        'xscale': scale,
+		        'yscale': scale},
+		        )
+			x -= 600 * scale
+			block.add_text(f"2PL{h}*{bf}*{tf}",
+						dxfattribs=dxfattribs_text).set_pos(
+						(x, y),
+						align="BOTTOM_LEFT"
 						)
 
 		if o.web_plate_size:
