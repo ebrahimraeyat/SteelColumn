@@ -207,9 +207,8 @@ def get_view_direction(View):
 	if View == "3D":
 		return (1, -1 , 0.2)
 
-def export_to_dxf(filename, hidden_edges=False, View="Flange"):
+def export_to_dxf(filename, show_hidden_edges=False, View="Flange"):
 
-	show_hidden_edges = hidden_edges	
 	view_scale = 1
 	page = FreeCAD.ActiveDocument.addObject('TechDraw::DrawPage', 'Page')
 	FreeCAD.ActiveDocument.addObject('TechDraw::DrawSVGTemplate', 'Template')
@@ -238,8 +237,14 @@ def export_to_dxf(filename, hidden_edges=False, View="Flange"):
 		# view.ViewObject.HiddenWidth = .001
 		view.Direction = get_view_direction(View)
 
-		names = [ct.ipe_name] + ct.flang_plates_name + ct.base_plate_name + ct.nardebani_names + \
-			ct.connection_ipes_name + ct.souble_ipes_name + ct.neshimans_name
+		names = [ct.ipe_name] + \
+				ct.flang_plates_name + \
+				(ct.web_plates_name if View != "Flange" else []) + \
+				ct.base_plate_name + \
+				ct.nardebani_names + \
+				ct.connection_ipes_name + \
+				ct.souble_ipes_name + \
+				ct.neshimans_name
 
 		view.Source = [FreeCAD.ActiveDocument.getObject(name) for name in names]
 		page.addView(view)
@@ -250,8 +255,9 @@ def export_to_dxf(filename, hidden_edges=False, View="Flange"):
 		e = visible_edges[0]
 		comp = e.generalFuse(visible_edges[1:])
 		visible_edges = comp[0].Edges
-		hidden_edges = view.getHiddenEdges()
-		if hidden_edges:
+		hidden_edges = []
+		if show_hidden_edges:
+			hidden_edges = view.getHiddenEdges()
 			hidden_edges = get_unique_edges(hidden_edges, ct, view.Scale, h)
 			e = hidden_edges[0]
 			comp = e.generalFuse(hidden_edges[1:])
