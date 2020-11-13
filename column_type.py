@@ -17,9 +17,9 @@ from os.path import join, dirname, abspath
 
 import config
 
-extra_row = 9
+extra_row = 10
 SIZE, PABAZ, BASELEVEL, EXTENDLENGTH, EXTENDPLATEABOVE, EXTENDPLATEBELOW, \
-CONNECTIONIPELENGTH, CONNECTIONIPEABOVE, XPOS = range(extra_row)
+CONNECTIONIPELENGTH, CONNECTIONIPEABOVE, XPOS, NUMBER = range(extra_row)
 
 
 class ColumnType:
@@ -44,7 +44,7 @@ class ColumnType:
                 "App::PropertyInteger",
                 "N",
                 "column_type",
-                )
+                ).N = 1
 
         if not hasattr(obj, "pa_baz"):
             obj.addProperty(
@@ -617,11 +617,20 @@ class ViewProviderColumnType:
         return join(dirname(abspath(__file__)),"Resources", "icons","column.png")
 
 
-def make_column_type(heights, sections_name, size=16, pa_baz=False, base_level=0, extend_length=.8,
-    extend_plate_len_above=.8, extend_plate_len_below=.8, connection_ipe_lengths=[1., .5], pos=(0, 0)):
-    '''
+def make_column_type(
+        heights,
+        sections_name,
+        size=16,
+        pa_baz=False,
+        base_level=0,
+        extend_length=.8,
+        extend_plate_len_above=.8,
+        extend_plate_len_below=.8,
+        connection_ipe_lengths=[1., .5],
+        pos=(0, 0),
+        N=1,
+        ):
 
-    '''
     obj = FreeCAD.ActiveDocument.addObject("Part::FeaturePython", "column_type")
     ColumnType(obj)
     ViewProviderColumnType(obj.ViewObject)
@@ -636,6 +645,7 @@ def make_column_type(heights, sections_name, size=16, pa_baz=False, base_level=0
     obj.size = str(size)
     obj.pa_baz = pa_baz
     obj.connection_ipe_lengths = connection_ipe_lengths
+    obj.N = N
     return obj
 
 
@@ -679,6 +689,8 @@ class ColumnTableModel(QAbstractTableModel):
                 return "conn_ipe_len (m)"
             if section == no_of_story + CONNECTIONIPEABOVE:
                 return "conn_ipe_above (m)"
+            if section == no_of_story + NUMBER:
+                return "N"
             if section == 0:
                 return "Base"
             else:
@@ -720,6 +732,8 @@ class ColumnTableModel(QAbstractTableModel):
             return str(col_obj.connection_ipe_lengths[1])
         elif row == no_of_story + XPOS:
             return str(col_obj.Placement.Base.x)
+        elif row == no_of_story + NUMBER:
+            return str(col_obj.N)
         else:
             section_name = col_obj.sections_name[row]
             self.sections_name.add(section_name)
@@ -764,6 +778,8 @@ class ColumnTableModel(QAbstractTableModel):
                 col_obj.connection_ipe_lengths = lens
             elif row == no_of_story + XPOS:
                 col_obj.Placement.Base.x = int(value)
+            elif row == no_of_story + NUMBER:
+                col_obj.N = int(value)
             else:
                 sections_name = col_obj.sections_name
                 sections_name[row] = str(value)
@@ -791,6 +807,10 @@ class ColumnDelegate(QItemDelegate):
             combobox = QComboBox(parent)
             combobox.addItems(["Yes", "No"])
             return combobox
+        elif row == no_of_story + NUMBER:
+            spinbox = QSpinBox(parent)
+            spinbox.setMinimum(1)
+            return spinbox
         # elif row == no_of_story + BASELEVEL:
         #     col_obj.base_level = float(value)
         # elif row == no_of_story + EXTENDLENGTH:
@@ -819,6 +839,7 @@ class ColumnDelegate(QItemDelegate):
             no_of_story + EXTENDPLATEABOVE,
             no_of_story + XPOS,
             no_of_story + EXTENDPLATEBELOW,
+            no_of_story + NUMBER,
             ):
             QItemDelegate.setModelData(self, editor, model, index)
         else:
@@ -826,7 +847,7 @@ class ColumnDelegate(QItemDelegate):
 
     def sizeHint(self, option, index):
         fm = option.fontMetrics
-        return QSize(fm.width("2IPE14PL200X10W200X10"), fm.height())
+        return QSize(fm.width("2IPE14FPL200X10WPL200X10"), fm.height())
 
 
 
@@ -891,6 +912,7 @@ class Ui:
         connection_ipes_above_length = self.form.connection_ipe_above.value()
         pos = (x, 0)
         pa_baz = self.form.pa_baz.isChecked()
+        N = self.form.number.value()
         col = make_column_type(
             heights,
             sections_name,
@@ -901,7 +923,8 @@ class Ui:
             pa_baz=pa_baz,
             connection_ipe_lengths=[connection_ipe_length, connection_ipes_above_length],
             extend_plate_len_above=extend_plate_len_above,
-            extend_plate_len_below=extend_plate_len_below
+            extend_plate_len_below=extend_plate_len_below,
+            N=N,
             )
         col_names = self.model.Levels.columns_names
         col_names.append(col.Name)

@@ -267,12 +267,14 @@ def export_to_dxf(filename, hidden_edges=False, View="Flange"):
 		# add column type text
 		text_height = 30 * view.Scale
 		x = (ct.Placement.Base.x) * view.Scale
-		block.add_text(f"C{i}",
-			dxfattribs = {'color': 6, "height": 2 * text_height, 'style': 'ROMANT'}).set_pos(
-				(x, (zmin_ct - 50) * view.Scale),
-				align="TOP_CENTER",
-				)
-
+		number = ct.N
+		mtext = block.add_mtext(
+			f"\\C6\\SC{i}/ N={number};",
+			dxfattribs = {'style': 'ROMANT'}
+			)
+		mtext.dxf.insert = (x, (zmin_ct - 50) * view.Scale)
+		mtext.dxf.char_height = text_height * 1.5
+		mtext.dxf.attachment_point = 2
 		add_section_edges_to_dxf(ct, {'layer':"Section", 'color': 2}, block, 0, view.Scale)
 
 
