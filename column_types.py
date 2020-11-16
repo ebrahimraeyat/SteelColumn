@@ -2,6 +2,7 @@ import FreeCAD
 import FreeCADGui
 import Arch
 import Draft
+import Part
 import ArchComponent
 
 from PySide2.QtWidgets import *
@@ -27,6 +28,13 @@ class ColumnTypes:
 			obj.addProperty(
 				"App::PropertyFloat",
 				"base_level",
+				"column_types",
+				)
+
+		if not hasattr(obj, "Base"):
+			obj.addProperty(
+				"App::PropertyLink",
+				"Base",
 				"column_types",
 				)
 
@@ -79,7 +87,7 @@ class ColumnTypes:
 
 	def execute(self, obj):
 		scale = 1000 * obj.v_scale
-			# shapes = []
+		shapes = []
 		childrens_name = []
 		levels = [obj.base_level * scale]
 		real_level = [obj.base_level]
@@ -88,6 +96,9 @@ class ColumnTypes:
 		f.ViewObject.FontSize = 200
 		f.ViewObject.ShowLevel = False
 		f.Placement.Base = FreeCAD.Vector(-2000, -2000, levels[-1])
+		plane = Part.makePlane(20000, 20000)
+		plane.Placement.Base.z = levels[-1]
+		shapes.append(plane)
 		childrens_name.append(f.Name)
 		for i, height in enumerate(obj.heights):
 			levels.append(levels[-1] + height * scale)
@@ -100,14 +111,15 @@ class ColumnTypes:
 			f.Placement.Base = pl
 			f.Height = height * scale
 			childrens_name.append(f.Name)
-			rec = Draft.makeRectangle(length=20000, height=20000, face=True, support=None)
-			rec.Placement.Base = pl
-			rec.ViewObject.Transparency = 90
-			rec.ViewObject.LineColor = (1.00,1.00,1.00)
-			rec.ViewObject.PointColor = (1.00,1.00,1.00)
-			rec.ViewObject.ShapeColor = (0.68,0.95,0.95)
-			f.Group.append(rec.Name)
-			childrens_name.append(rec.Name)
+			plane = Part.makePlane(20000, 20000)
+			plane.Placement.Base.z = levels[-1]
+			shapes.append(plane)
+		com = Part.makeCompound(shapes)
+		obj.Shape = com
+		obj.ViewObject.Transparency = 90
+		obj.ViewObject.LineColor = (1.00,1.00,1.00)
+		obj.ViewObject.PointColor = (1.00,1.00,1.00)
+		obj.ViewObject.ShapeColor = (0.68,0.95,0.95)
 
 		obj.levels = real_level
 
@@ -163,7 +175,10 @@ class ViewProviderColumnTypes(ArchComponent.ViewProviderComponent):
 		return join(dirname(abspath(__file__)),"Resources", "icons","Levels.svg")
 
 	def setEdit(self, vobj, mode=0):
-		create_levels()
+		ui = Ui()
+		self.task = ui
+		ui.setupUi()
+		FreeCADGui.Control.showDialog(ui)
 		return True
 
 	def unsetEdit(self, vobj, mode):
@@ -179,14 +194,13 @@ class ViewProviderColumnTypes(ArchComponent.ViewProviderComponent):
 
 
 
-def make_columns_types(prop=[], heights=None, base_level=None):
+def make_columns_types(heights=None, base_level=None):
 	FreeCADGui.activateWorkbench("ArchWorkbench")
-	obj = FreeCAD.ActiveDocument.addObject("App::DocumentObjectGroupPython","Levels")
+	obj = FreeCAD.ActiveDocument.addObject("Part::FeaturePython","Levels")
 	ColumnTypes(obj)
 	ViewProviderColumnTypes(obj.ViewObject)
 	obj.heights = heights
 	obj.base_level = base_level
-	obj.Proxy.column_types_prop = prop
 	FreeCAD.ActiveDocument.recompute()
 	FreeCAD.ActiveDocument.recompute()
 	FreeCADGui.activeDocument().activeView().viewFront()
