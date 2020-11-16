@@ -616,6 +616,12 @@ class ViewProviderColumnType:
     def getIcon(self):
         return join(dirname(abspath(__file__)),"Resources", "icons","column.png")
 
+    def __getstate__(self):
+    	return None
+
+    def __setstate__(self, state):
+    	return None
+
 
 def make_column_type(
         heights,

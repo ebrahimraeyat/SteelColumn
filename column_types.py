@@ -169,6 +169,12 @@ class ViewProviderColumnTypes(ArchComponent.ViewProviderComponent):
 	def unsetEdit(self, vobj, mode):
 		FreeCADGui.Control.closeDialog()
 		return
+
+	def __getstate__(self):
+		return None
+
+	def __setstate__(self, state):
+		return None
 		
 
 
