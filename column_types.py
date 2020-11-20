@@ -241,6 +241,8 @@ class LevelTableModel(QAbstractTableModel):
 				return "Height"
 			elif section == LEVEL:
 				return "Level"
+		if orientation == Qt.Vertical:
+			return str(section + 1)
 
 	def flags(self, index):
 		if not index.isValid():
