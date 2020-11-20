@@ -42,16 +42,23 @@ class ColumnTypes:
 			obj.addProperty(
 				"App::PropertyFloatList",
 				"heights",
-				"column_types",
+				"Levels",
 			)
 
 		if not hasattr(obj, "levels"):
 			obj.addProperty(
 				"App::PropertyFloatList",
 				"levels",
-				"column_types",
+				"Levels",
 				)
 			obj.setEditorMode("levels", 1)
+
+		if not hasattr(obj, "levels_name"):
+			obj.addProperty(
+				"App::PropertyStringList",
+				"levels_name",
+				"Levels",
+				)
 
 		if not hasattr(obj, "v_scale"):
 			obj.addProperty(
@@ -92,7 +99,7 @@ class ColumnTypes:
 		levels = [obj.base_level * scale]
 		real_level = [obj.base_level]
 		lev = self.get_level_text(real_level[-1])
-		f = Arch.makeFloor(name=f"Base  {lev}")
+		f = Arch.makeFloor(name=f"{obj.levels_name[0]}  {lev}")
 		f.ViewObject.FontSize = 200
 		f.ViewObject.ShowLevel = False
 		f.Placement.Base = FreeCAD.Vector(-2000, -2000, levels[-1])
@@ -104,7 +111,7 @@ class ColumnTypes:
 			levels.append(levels[-1] + height * scale)
 			real_level.append(real_level[-1] + height)
 			lev = self.get_level_text(real_level[-1])
-			f = Arch.makeFloor(name=f"Story {i + 1}  {lev}")
+			f = Arch.makeFloor(name=f"{obj.levels_name[i + 1]}  {lev}")
 			f.ViewObject.FontSize = 200
 			f.ViewObject.ShowLevel = False
 			pl = FreeCAD.Vector(-2000, -2000, levels[-1])
@@ -176,7 +183,6 @@ class ViewProviderColumnTypes(ArchComponent.ViewProviderComponent):
 
 	def setEdit(self, vobj, mode=0):
 		ui = Ui()
-		self.task = ui
 		ui.setupUi()
 		FreeCADGui.Control.showDialog(ui)
 		return True
@@ -194,13 +200,18 @@ class ViewProviderColumnTypes(ArchComponent.ViewProviderComponent):
 
 
 
-def make_columns_types(heights=None, base_level=None):
+def make_columns_types(
+		heights=[3.5],
+		base_level=-1.2,
+		levels_name=["Base", "Story 1"],
+		):
 	FreeCADGui.activateWorkbench("ArchWorkbench")
 	obj = FreeCAD.ActiveDocument.addObject("Part::FeaturePython","Levels")
 	ColumnTypes(obj)
 	ViewProviderColumnTypes(obj.ViewObject)
 	obj.heights = heights
 	obj.base_level = base_level
+	obj.levels_name = levels_name
 	FreeCAD.ActiveDocument.recompute()
 	FreeCAD.ActiveDocument.recompute()
 	FreeCADGui.activeDocument().activeView().viewFront()
@@ -236,8 +247,6 @@ class LevelTableModel(QAbstractTableModel):
 			return Qt.ItemIsEnabled
 		col = index.column()
 		i = index.row()
-		if col == STORY:
-			return Qt.ItemIsEnabled
 		if i != 0 and col == LEVEL:
 			return Qt.ItemIsEnabled
 
@@ -257,9 +266,7 @@ class LevelTableModel(QAbstractTableModel):
 
 		if role == Qt.DisplayRole:
 			if column == STORY:
-				if i == 0:
-					return "Base"
-				return f"Story {i}"
+				return str(self.cts.levels_name[i])
 			elif column == HEIGHT:
 				if i == 0:
 					return ""
@@ -267,8 +274,6 @@ class LevelTableModel(QAbstractTableModel):
 
 			elif column == LEVEL:
 				return str(self.cts.levels[i])
-
-
 
 	def rowCount(self, index=QModelIndex()):
 		if self.cts:
@@ -287,6 +292,12 @@ class LevelTableModel(QAbstractTableModel):
 				self.cts.Proxy.execute(self.cts)
 			elif i == 0 and column == LEVEL:
 				self.cts.base_level = float(value)
+				self.cts.Proxy.execute(self.cts)
+			elif column == STORY:
+				if i < len(self.cts.levels_name):
+					self.cts.levels_name = self.cts.levels_name[:i] + [str(value)] + self.cts.levels_name[i + 1:]
+				else:
+					self.cts.levels_name = self.cts.levels_name[:i] + [str(value)]
 				self.cts.Proxy.execute(self.cts)
 			self.dataChanged.emit(index, index)
 			FreeCAD.ActiveDocument.recompute()
@@ -318,7 +329,9 @@ class Ui:
 		try:
 			self.model.cts = FreeCAD.ActiveDocument.Levels
 		except:
-			self.model.cts = make_columns_types(heights=[], base_level=-1.2)
+			self.model.cts = make_columns_types(heights=[3.5,], base_level=-1.2,
+			levels_name=["Base", "Story 1"])
+		self.form.story_name.setText(f"Story {len(self.model.cts.heights) + 1}")
 		self.form.tableView.setModel(self.model)
 
 
@@ -330,12 +343,14 @@ class Ui:
 	def add_story(self):
 		self.model.beginResetModel()
 		self.model.cts.heights += [self.form.height_spinbox.value()]
+		self.model.cts.levels_name += [self.form.story_name.text()]
 		self.model.cts.v_scale = self.form.v_scale.value()
 		self.model.cts.composite_deck = self.form.composite_deck.isChecked()
 		self.model.cts.Proxy.execute(self.model.cts)
 		self.model.endResetModel()
 		FreeCAD.ActiveDocument.recompute()
 		FreeCAD.ActiveDocument.recompute()
+		self.form.story_name.setText(f"Story {len(self.model.cts.levels_name)}")
 		FreeCADGui.SendMsgToActiveView("ViewFit")
 
 	def remove_story(self):
@@ -343,10 +358,15 @@ class Ui:
 
 		for index in indexes:
 			i = index.row()
-			if i == 0:
+			col = index.column()
+			if i == 0 and col == LEVEL:
 				return
 			self.model.beginResetModel()
 			self.model.cts.heights = self.model.cts.heights[:i-1] + self.model.cts.heights[i:]
+			if i < len(self.model.cts.levels_name):
+				self.model.cts.levels_name = self.model.cts.levels_name[:i] + self.model.cts.levels_name[i + 1:]
+			else:
+				self.model.cts.levels_name = self.model.cts.levels_name[:i]
 			self.model.cts.Proxy.execute(self.model.cts)
 			self.model.endResetModel()
 			FreeCAD.ActiveDocument.recompute()

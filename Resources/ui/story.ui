@@ -106,7 +106,24 @@
      <property name="text">
       <string>composite Deck</string>
      </property>
+     <property name="checked">
+      <bool>true</bool>
+     </property>
     </widget>
+   </item>
+   <item>
+    <layout class="QHBoxLayout" name="horizontalLayout_2">
+     <item>
+      <widget class="QLabel" name="label">
+       <property name="text">
+        <string>Name</string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QLineEdit" name="story_name"/>
+     </item>
+    </layout>
    </item>
    <item>
     <widget class="QTableView" name="tableView"/>
