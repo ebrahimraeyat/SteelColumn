@@ -59,6 +59,14 @@ class ColumnType:
                 "Placement",
                 "Base",
                 )
+
+        if not hasattr(obj, "level_obj"):
+            obj.addProperty(
+                "App::PropertyLink",
+                "level_obj",
+                "Levels",
+                )
+        obj.setEditorMode("level_obj", 1)
         
         if not hasattr(obj, "heights"):
             obj.addProperty(
@@ -67,19 +75,36 @@ class ColumnType:
                 "column_type",
             )
 
+        if not hasattr(obj, "levels_name"):
+            obj.addProperty(
+                "App::PropertyStringList",
+                "levels_name",
+                "Levels",
+            )
+        obj.setEditorMode("levels_name", 1)
+
         if not hasattr(obj, "levels"):
             obj.addProperty(
                 "App::PropertyFloatList",
                 "levels",
-                "column_type",
+                "Levels",
             )
-        obj.setEditorMode("levels", 1)
+        obj.setEditorMode("levels_name", 1)
+
+        if not hasattr(obj, "levels_index"):
+            obj.addProperty(
+                "App::PropertyIntegerList",
+                "levels_index",
+                "Levels",
+                )
+        # obj.setEditorMode("levels_index", 1)
+
 
         if not hasattr(obj, "base_level"):
             obj.addProperty(
                 "App::PropertyFloat",
                 "base_level",
-                "column_type",
+                "Levels",
             )
 
         if not hasattr(obj, "childrens_name"):
@@ -259,9 +284,18 @@ class ColumnType:
 
         scale = 1000 * obj.v_scale
         # shapes = []
-        levels = [obj.base_level]
-        for height in obj.heights:
-            levels.append(levels[-1] + height)
+        levels = []
+        for i in obj.levels_index:
+            if i < len(obj.level_obj.levels):
+                levels.append(obj.level_obj.levels[i])
+        obj.base_level = levels[0]
+        heights = []
+        for i in range(len(levels[:-1])):
+            heights.append(levels[i + 1] - levels[i])
+        obj.heights = heights
+        # levels = [obj.base_level]
+        # for height in obj.heights:
+        #     levels.append(levels[-1] + height)
         obj.levels = [lev  * scale for lev in levels]
 
         simplify_sections_name = [obj.sections_name[0]]
@@ -624,11 +658,11 @@ class ViewProviderColumnType:
 
 
 def make_column_type(
-        heights,
+        levels_index,
         sections_name,
+        level_obj,
         size=16,
         pa_baz=False,
-        base_level=0,
         extend_length=.8,
         extend_plate_len_above=.8,
         extend_plate_len_below=.8,
@@ -640,9 +674,11 @@ def make_column_type(
     obj = FreeCAD.ActiveDocument.addObject("Part::FeaturePython", "column_type")
     ColumnType(obj)
     ViewProviderColumnType(obj.ViewObject)
-    obj.heights = heights
+    obj.levels_index = levels_index
+    obj.level_obj = level_obj
+    # obj.heights = heights
     obj.sections_name = sections_name
-    obj.base_level = base_level
+    # obj.base_level = base_level
     obj.extend_length = extend_length
     obj.extend_plate_len_above = extend_plate_len_above
     obj.extend_plate_len_below = extend_plate_len_below
@@ -871,6 +907,9 @@ class Ui:
         self.model = ColumnTableModel()
         try:
             self.model.Levels = FreeCAD.ActiveDocument.Levels
+            self.form.first_level_combo.addItems(self.model.Levels.levels_name)
+            self.form.last_level_combo.addItems(self.model.Levels.levels_name)
+            self.form.last_level_combo.setCurrentIndex(len(self.model.Levels.levels_name) - 1)
         except:
             pass
         self.form.tableView.setModel(self.model)
@@ -902,7 +941,7 @@ class Ui:
         heights = self.model.Levels.heights
         ipe_size = int(self.form.ipe_size.currentText())
         sections_name = [f"2IPE{ipe_size}"] * len(heights)
-        base_level = self.model.Levels.base_level
+        # base_level = self.model.Levels.base_level
         dx = self.form.deltax.value()
         if len(self.model.Levels.columns_names) >= 1:
             last_column_name = self.model.Levels.columns_names[-1]
@@ -919,11 +958,14 @@ class Ui:
         pos = (x, 0)
         pa_baz = self.form.pa_baz.isChecked()
         N = self.form.number.value()
+        lev_i = self.form.first_level_combo.currentIndex()
+        lev_j = self.form.last_level_combo.currentIndex()
+        levels_index = list(range(lev_i, lev_j + 1))
         col = make_column_type(
-            heights,
+            levels_index,
             sections_name,
+            self.model.Levels,
             size=ipe_size,
-            base_level=base_level,
             extend_length=extend_length,
             pos=pos,
             pa_baz=pa_baz,
