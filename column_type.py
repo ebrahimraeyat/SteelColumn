@@ -698,8 +698,8 @@ class ColumnTableModel(QAbstractTableModel):
         self.ui = None
         self.levels_name = []
         self.level_obj = None
-        # self.sections_name = []
-        # self.all_sections = set()
+        self.sections_name = []
+        self.all_sections = set()
 
     def headerData(self, section, orientation, role=Qt.DisplayRole):
         if role == Qt.TextAlignmentRole:
@@ -737,12 +737,11 @@ class ColumnTableModel(QAbstractTableModel):
         if col == 0:
             return self.levels_name[row]
         elif col == 1:
-            size = self.ui.ipe_size.currentText()
-            section_name = f"2IPE{size}"
             # if row <= len(self.sections_name):
             #     print(f"row = {row}")
             #     self.sections_name.append(section_name)
             #     self.all_sections.add(section_name)
+            section_name = self.sections_name[row]
             return section_name
 
 
@@ -756,51 +755,50 @@ class ColumnTableModel(QAbstractTableModel):
     def columnCount(self, index=QModelIndex()):
         return 2
 
-    # def setData(self, index, value, role=Qt.EditRole):
-    #     if index.isValid():
-    #         col = index.column()
-    #         row = index.row()
-    #         if col == 1:
-    #             if row < len(self.sections_name):
-    #                 self.sections_name[row] = str(value)
-    #                 self.all_sections.add(str(value))
-    #             return str(value)
-    #         return True
-    #     return False
+    def setData(self, index, value, role=Qt.EditRole):
+        if index.isValid():
+            col = index.column()
+            row = index.row()
+            if col == 1:
+                self.all_sections.add(str(value))
+                self.sections_name[row] = str(value)
+            self.emit(SIGNAL("dataChanged(QModelIndex,QModelIndex)"),index, index)
+            return True
+        return False
 
 
-# class ColumnDelegate(QItemDelegate):
+class ColumnDelegate(QItemDelegate):
 
-#     def __init__(self, parent=None):
-#         super().__init__(parent)
+    def __init__(self, parent=None):
+        super().__init__(parent)
 
-#     def createEditor(self, parent, option, index):
-#         col = index.column()
-#         if col == 1:
-#             combobox = QComboBox(parent)
-#             size = index.model().ui.ipe_size.currentText()
-#             # # sections = set()
-#             # for section_name in index.model().sections_name:
-#             #     if f"IPE{size}" in section_name:
-#             #         sections.add(section_name)
-#             sections = index.model().all_sections
-#             combobox.addItems(sections)
-#             combobox.setEditable(True)
-#             return combobox
-#         else:
-#             return QItemDelegate.createEditor(self, parent, option, index)
+    def createEditor(self, parent, option, index):
+        col = index.column()
+        if col == 1:
+            combobox = QComboBox(parent)
+            size = index.model().ui.ipe_size.currentText()
+            # # sections = set()
+            # for section_name in index.model().sections_name:
+            #     if f"IPE{size}" in section_name:
+            #         sections.add(section_name)
+            sections = index.model().all_sections
+            combobox.addItems(sections)
+            combobox.setEditable(True)
+            return combobox
+        else:
+            return QItemDelegate.createEditor(self, parent, option, index)
 
-#     # def setEditorData(self, editor, index):
-#     #     editor.setValue()
+    # def setEditorData(self, editor, index):
+    #     editor.setValue()
 
-#     def setModelData(self, editor, model, index):
-#         col = index.column()
-#         if col == 1:
-#             model.setData(index, editor.currentText())
+    def setModelData(self, editor, model, index):
+        col = index.column()
+        if col == 1:
+            model.setData(index, editor.currentText())
 
-#     def sizeHint(self, option, index):
-#         fm = option.fontMetrics
-#         return QSize(fm.width("2IPE14FPL200X10WPL200X10"), fm.height())
+    def sizeHint(self, option, index):
+        fm = option.fontMetrics
+        return QSize(fm.width("2IPE14FPL200X10WPL200X10"), fm.height())
 
 
 
@@ -819,11 +817,13 @@ class Ui:
         self.form.last_level_combo.addItems(self.model.level_obj.levels_name)
         self.form.last_level_combo.setCurrentIndex(len(self.model.level_obj.levels_name) - 1)
         self.model.ui = self.form
-        self.set_levels_name()
-        self.form.tableView.setModel(self.model)
-        # self.form.tableView.setItemDelegate(ColumnDelegate(self.form))
         json_file=os.path.join(FreeCAD.getUserAppDataDir(), 'column.json')
         self.load_config(json_file)
+        size = self.form.ipe_size.currentText()
+        self.model.sections_name = [f"2IPE{size}"] * len(self.model.level_obj.heights)
+        self.set_levels_name()
+        self.form.tableView.setModel(self.model)
+        self.form.tableView.setItemDelegate(ColumnDelegate(self.form))
 
     def add_connections(self):
         self.form.ipe_size.currentIndexChanged.connect(self.reset_model)
@@ -843,6 +843,14 @@ class Ui:
 
     def reset_model(self):
         self.model.beginResetModel()
+        sections_name = []
+        for row in range(self.model.rowCount()):
+            index = self.model.index(row, 1)
+            name = self.model.data(index)
+            size = self.form.ipe_size.currentText()
+            name = f"{name[:4]}{size}{name[6:]}"
+            sections_name.append(name)
+        self.model.sections_name = sections_name
         self.model.endResetModel()
 
 
