@@ -296,6 +296,8 @@ class LevelTableModel(QAbstractTableModel):
 				self.cts.base_level = float(value)
 				self.cts.Proxy.execute(self.cts)
 			elif column == STORY:
+				if str(value) in self.cts.levels_name:
+					return False
 				if i < len(self.cts.levels_name):
 					self.cts.levels_name = self.cts.levels_name[:i] + [str(value)] + self.cts.levels_name[i + 1:]
 				else:

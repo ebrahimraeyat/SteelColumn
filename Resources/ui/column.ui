@@ -20,28 +20,6 @@
    <item>
     <layout class="QVBoxLayout" name="verticalLayout">
      <item>
-      <widget class="QPushButton" name="addButton">
-       <property name="text">
-        <string>Add      </string>
-       </property>
-       <property name="icon">
-        <iconset resource="../resource.qrc">
-         <normaloff>:/steelColumn/icons/add.svg</normaloff>:/steelColumn/icons/add.svg</iconset>
-       </property>
-      </widget>
-     </item>
-     <item>
-      <widget class="QPushButton" name="removeButton">
-       <property name="text">
-        <string>Remove</string>
-       </property>
-       <property name="icon">
-        <iconset resource="../resource.qrc">
-         <normaloff>:/steelColumn/icons/remove.svg</normaloff>:/steelColumn/icons/remove.svg</iconset>
-       </property>
-      </widget>
-     </item>
-     <item>
       <layout class="QGridLayout" name="gridLayout">
        <item row="8" column="0">
         <widget class="QLabel" name="label_2">
