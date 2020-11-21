@@ -94,6 +94,31 @@ class Columns:
         return True if FreeCADGui.ActiveDocument.Levels else False
 
 
+class RemoveColumn:
+    def GetResources(self):
+        MenuText = QtCore.QT_TRANSLATE_NOOP(
+            "Levels",
+            "Remove Columns")
+        ToolTip = QtCore.QT_TRANSLATE_NOOP(
+            "Levels",
+            "Remove Columns")
+        rel_path = "Mod/SteelColumn/Resources/icons/remove.svg"
+        path = FreeCAD.getHomePath() + rel_path
+        import os
+        if not os.path.exists(path):
+            path =  FreeCAD.getUserAppDataDir() + rel_path
+        return {'Pixmap': path,
+                'MenuText': MenuText,
+                'ToolTip': ToolTip}
+
+
+    def  Activated(self):
+        column_type.remove_column()
+
+    def IsActive(self):
+        return True if FreeCADGui.ActiveDocument.Levels else False
+
+
 class Update:
 
     def GetResources(self):
@@ -135,12 +160,14 @@ def get_save_filename(ext):
 
 FreeCADGui.addCommand("steel_column_levels", Levels())
 FreeCADGui.addCommand("steel_column_columns", Columns())
+FreeCADGui.addCommand("steel_column_remove", RemoveColumn())
 FreeCADGui.addCommand('steel_column_dxf', Dxf())
 FreeCADGui.addCommand("steel_column_update", Update())
 
 steel_column_commands = [
     "steel_column_levels",
     "steel_column_columns",
+    "steel_column_remove",
     "steel_column_dxf",
     "steel_column_update",
     ]

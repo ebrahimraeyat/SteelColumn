@@ -918,43 +918,35 @@ class Ui:
         # self.model.endResetModel()
 
 
-    def remove_column(self):
-        self.model.beginResetModel()
-        indexes = self.form.tableView.selectionModel().selectedColumns()
-        if not indexes:
-            return
-        col_names = self.model.Levels.columns_names
-        x_placements = []
-        for name in col_names:
-            col_obj = FreeCAD.ActiveDocument.getObject(name)
-            x_placements.append(col_obj.Placement.Base.x)
-        print(x_placements)
-        index = indexes[0]
-        i = index.column()
-        col_name = col_names[i]
-        col_obj = FreeCAD.ActiveDocument.getObject(col_name)
-        for name in col_obj.childrens_name:
-            remove_obj(name)
-        col_names.remove(col_name)
-        if len(x_placements) > i + 1:
-            deltax = x_placements[i + 1] - x_placements[i]
-        else:
-            deltax = 0
-        x_placements.remove(x_placements[i])
-        if len(x_placements) > 0:
-            for j, x in enumerate(x_placements[i:]):
-                x_placements[i + j] -= deltax
+def remove_column():
+    Levels = FreeCAD.ActiveDocument.Levels
+    col_names = Levels.columns_names
+    x_placements = []
+    for name in col_names:
+        col_obj = FreeCAD.ActiveDocument.getObject(name)
+        x_placements.append(col_obj.Placement.Base.x)
+    col_obj = FreeCADGui.Selection.getSelection()[0]
+    col_name = col_obj.Name
+    i = col_names.index(col_name)
+    for name in col_obj.childrens_name:
+        remove_obj(name)
+    col_names.remove(col_name)
+    if len(x_placements) > i + 1:
+        deltax = x_placements[i + 1] - x_placements[i]
+    else:
+        deltax = 0
+    x_placements.remove(x_placements[i])
+    if len(x_placements) > 0:
+        for j, x in enumerate(x_placements[i:]):
+            x_placements[i + j] -= deltax
 
-        FreeCAD.ActiveDocument.removeObject(col_name)
-        self.model.Levels.columns_names = col_names
-        print(x_placements)
-        for i, name in enumerate(col_names):
-            col_obj = FreeCAD.ActiveDocument.getObject(name)
-            col_obj.Placement.Base.x = x_placements[i]
-        FreeCAD.ActiveDocument.recompute()
-        FreeCAD.ActiveDocument.recompute()
-        self.model.endResetModel()
-
+    FreeCAD.ActiveDocument.removeObject(col_name)
+    Levels.columns_names = col_names
+    for i, name in enumerate(col_names):
+        col_obj = FreeCAD.ActiveDocument.getObject(name)
+        col_obj.Placement.Base.x = x_placements[i]
+    FreeCAD.ActiveDocument.recompute()
+    FreeCAD.ActiveDocument.recompute()
 
 def create_columns():
     ui = Ui()
