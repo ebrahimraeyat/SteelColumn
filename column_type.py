@@ -741,8 +741,7 @@ class ColumnTableModel(QAbstractTableModel):
             #     print(f"row = {row}")
             #     self.sections_name.append(section_name)
             #     self.all_sections.add(section_name)
-            section_name = self.sections_name[row]
-            return section_name
+            return self.sections_name[row]
 
 
     def rowCount(self, index=QModelIndex()):
@@ -812,15 +811,15 @@ class Ui:
         icon_path = os.path.join(
             os.path.dirname(__file__), 'Resources/icons/')
         self.model = ColumnTableModel()
+        json_file=os.path.join(FreeCAD.getUserAppDataDir(), 'column.json')
+        self.load_config(json_file)
+        size = self.form.ipe_size.currentText()
         self.model.level_obj = FreeCAD.ActiveDocument.Levels
+        self.model.sections_name = [f"2IPE{size}"] * len(self.model.level_obj.heights)
         self.form.first_level_combo.addItems(self.model.level_obj.levels_name)
         self.form.last_level_combo.addItems(self.model.level_obj.levels_name)
         self.form.last_level_combo.setCurrentIndex(len(self.model.level_obj.levels_name) - 1)
         self.model.ui = self.form
-        json_file=os.path.join(FreeCAD.getUserAppDataDir(), 'column.json')
-        self.load_config(json_file)
-        size = self.form.ipe_size.currentText()
-        self.model.sections_name = [f"2IPE{size}"] * len(self.model.level_obj.heights)
         self.set_levels_name()
         self.form.tableView.setModel(self.model)
         self.form.tableView.setItemDelegate(ColumnDelegate(self.form))

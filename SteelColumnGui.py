@@ -77,7 +77,7 @@ class Columns:
         ToolTip = QtCore.QT_TRANSLATE_NOOP(
             "Levels",
             "Creates Columns")
-        rel_path = "Mod/SteelColumn/Resources/icons/column.png"
+        rel_path = "Mod/SteelColumn/Resources/icons/add.svg"
         path = FreeCAD.getHomePath() + rel_path
         import os
         if not os.path.exists(path):
