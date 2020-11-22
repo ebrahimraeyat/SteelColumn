@@ -650,6 +650,17 @@ class ViewProviderColumnType:
     def getIcon(self):
         return join(dirname(abspath(__file__)),"Resources", "icons","column.png")
 
+    def setEdit(self, vobj, mode=0):
+        obj = vobj.Object
+        ui = Ui(obj)
+        ui.setupUi()
+        FreeCADGui.Control.showDialog(ui)
+        return True
+
+    def unsetEdit(self, vobj, mode):
+        FreeCADGui.Control.closeDialog()
+        return
+
     def __getstate__(self):
     	return None
 
@@ -802,27 +813,59 @@ class ColumnDelegate(QItemDelegate):
 
 
 class Ui:
-    def __init__(self):
+    def __init__(self, col_obj=None):
         self.form = FreeCADGui.PySideUic.loadUi(os.path.join(
             os.path.dirname(__file__), 'Resources/ui/column.ui'))
+        self.col_obj = col_obj
 
     def setupUi(self):
         self.add_connections()
-        icon_path = os.path.join(
-            os.path.dirname(__file__), 'Resources/icons/')
+        # icon_path = os.path.join(
+        #     os.path.dirname(__file__), 'Resources/icons/')
         self.model = ColumnTableModel()
         json_file=os.path.join(FreeCAD.getUserAppDataDir(), 'column.json')
-        self.load_config(json_file)
-        size = self.form.ipe_size.currentText()
         self.model.level_obj = FreeCAD.ActiveDocument.Levels
-        self.model.sections_name = [f"2IPE{size}"] * len(self.model.level_obj.heights)
         self.form.first_level_combo.addItems(self.model.level_obj.levels_name)
         self.form.last_level_combo.addItems(self.model.level_obj.levels_name)
-        self.form.last_level_combo.setCurrentIndex(len(self.model.level_obj.levels_name) - 1)
+        if not self.col_obj:
+            self.load_config(json_file)
+            size = self.form.ipe_size.currentText()
+            self.model.sections_name = [f"2IPE{size}"] * len(self.model.level_obj.heights)
+            self.form.last_level_combo.setCurrentIndex(len(self.model.level_obj.levels_name) - 1)
+        else:
+            self.fill_form(self.col_obj)
+            self.model.sections_name = self.col_obj.sections_name
+
         self.model.ui = self.form
         self.set_levels_name()
         self.form.tableView.setModel(self.model)
         self.form.tableView.setItemDelegate(ColumnDelegate(self.form))
+
+    def fill_form(self, col_obj):
+        size = col_obj.size
+        index = self.form.ipe_size.findText(size)
+        N = col_obj.N
+        pa_baz = col_obj.pa_baz
+        extend_length = col_obj.extend_length
+        extend_plate_len_above = col_obj.extend_plate_len_above
+        extend_plate_len_below = col_obj.extend_plate_len_below
+        connection_ipe_length = col_obj.connection_ipe_lengths[0]
+        connection_ipe_above = col_obj.connection_ipe_lengths[1]
+        level_obj = col_obj.level_obj
+        levels_index = col_obj.levels_index
+        lev_i = levels_index[0]
+        lev_j = levels_index[-1]
+        self.form.ipe_size.setCurrentIndex(index)
+        self.form.extend_length.setValue(float(extend_length))
+        self.form.extend_plate_len_above.setValue(float(extend_plate_len_above))
+        self.form.extend_plate_len_below.setValue(float(extend_plate_len_below))
+        self.form.connection_ipe_length.setValue(float(connection_ipe_length))
+        self.form.connection_ipe_above.setValue(float(connection_ipe_above))
+        self.form.pa_baz.setChecked(pa_baz)
+        self.form.number.setValue(int(N))
+        self.form.first_level_combo.setCurrentIndex(lev_i)
+        self.form.last_level_combo.setCurrentIndex(lev_j)
+
 
     def add_connections(self):
         self.form.ipe_size.currentIndexChanged.connect(self.reset_model)
@@ -877,13 +920,16 @@ class Ui:
             index = self.model.index(row, 1)
             name = self.model.data(index)
             sections_name.append(name)
-        dx = self.form.deltax.value()
-        if len(self.model.level_obj.columns_names) >= 1:
-            last_column_name = self.model.level_obj.columns_names[-1]
-            last_col = FreeCAD.ActiveDocument.getObject(last_column_name)
-            x = last_col.Placement.Base.x + dx * 1000
+        if not self.col_obj:
+            dx = self.form.deltax.value()
+            if len(self.model.level_obj.columns_names) >= 1:
+                last_column_name = self.model.level_obj.columns_names[-1]
+                last_col = FreeCAD.ActiveDocument.getObject(last_column_name)
+                x = last_col.Placement.Base.x + dx * 1000
+            else:
+                x = 0
         else:
-            x = 0
+            x = self.col_obj.Placement.Base.x
         extend_length = self.form.extend_length.value()
         extend_plate_len_above = self.form.extend_plate_len_above.value()
         extend_plate_len_below = self.form.extend_plate_len_below.value()
@@ -896,6 +942,8 @@ class Ui:
         lev_i = self.form.first_level_combo.currentIndex()
         lev_j = self.form.last_level_combo.currentIndex()
         levels_index = list(range(lev_i, lev_j + 1))
+        if bool(self.col_obj):
+            remove_column(self.col_obj, move_other=False)
         col = make_column_type(
             levels_index,
             sections_name,
@@ -918,35 +966,40 @@ class Ui:
         # self.model.endResetModel()
 
 
-def remove_column():
+def remove_column(col_obj=None, move_other=True):
+    if not col_obj:
+        col_obj = FreeCADGui.Selection.getSelection()[0]
+    col_name = col_obj.Name
     Levels = FreeCAD.ActiveDocument.Levels
     col_names = Levels.columns_names
     x_placements = []
     for name in col_names:
-        col_obj = FreeCAD.ActiveDocument.getObject(name)
-        x_placements.append(col_obj.Placement.Base.x)
-    col_obj = FreeCADGui.Selection.getSelection()[0]
-    col_name = col_obj.Name
+        col = FreeCAD.ActiveDocument.getObject(name)
+        x_placements.append(col.Placement.Base.x)
     i = col_names.index(col_name)
     for name in col_obj.childrens_name:
         remove_obj(name)
     col_names.remove(col_name)
-    if len(x_placements) > i + 1:
-        deltax = x_placements[i + 1] - x_placements[i]
-    else:
-        deltax = 0
-    x_placements.remove(x_placements[i])
-    if len(x_placements) > 0:
-        for j, x in enumerate(x_placements[i:]):
-            x_placements[i + j] -= deltax
+
+    if move_other:
+        if len(x_placements) > i + 1:
+            deltax = x_placements[i + 1] - x_placements[i]
+        else:
+            deltax = 0
+        x_placements.remove(x_placements[i])
+        if len(x_placements) > 0:
+            for j, x in enumerate(x_placements[i:]):
+                x_placements[i + j] -= deltax
 
     FreeCAD.ActiveDocument.removeObject(col_name)
     Levels.columns_names = col_names
-    for i, name in enumerate(col_names):
-        col_obj = FreeCAD.ActiveDocument.getObject(name)
-        col_obj.Placement.Base.x = x_placements[i]
-    FreeCAD.ActiveDocument.recompute()
-    FreeCAD.ActiveDocument.recompute()
+
+    if move_other:
+        for i, name in enumerate(col_names):
+            col_obj = FreeCAD.ActiveDocument.getObject(name)
+            col_obj.Placement.Base.x = x_placements[i]
+        FreeCAD.ActiveDocument.recompute()
+        FreeCAD.ActiveDocument.recompute()
 
 def create_columns():
     ui = Ui()
