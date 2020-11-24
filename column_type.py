@@ -379,6 +379,7 @@ class ColumnType:
         IPE.Height = h
         IPE.Placement.Base = FreeCAD.Vector(0, 0, simplify_levels[0]) + obj.Placement.Base
         IPE.ViewObject.ShapeColor = RED
+        obj.Shape = IPE.Shape
 
         front_draw_sources_name = []
 
@@ -656,6 +657,11 @@ class ViewProviderColumnType:
         ui.setupUi()
         FreeCADGui.Control.showDialog(ui)
         return True
+
+    def onDelete(self,vobj,subelements):
+        remove_column(vobj.Object)
+        return True
+
 
     def unsetEdit(self, vobj, mode):
         FreeCADGui.Control.closeDialog()
