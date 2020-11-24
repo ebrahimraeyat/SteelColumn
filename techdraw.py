@@ -53,7 +53,7 @@ def add_section_edges_to_dxf(ct, dxfattribs, block, z, scale):
 				zmax, zmin = flang_plate_bb.ZMax, flang_plate_bb.ZMin
 				flang_plate_height = flang_plate.Height
 				if zmin < o_zmin < zmax:
-					h = int(flang_plate_height.Value / ct.v_scale)
+					h = round(int(flang_plate_height.Value / ct.v_scale), -1)
 					break
 			bf, tf = o.flange_plate_size
 			y = bb.ZMax * scale + z + 20 * scale
