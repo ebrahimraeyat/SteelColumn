@@ -173,14 +173,6 @@ class ColumnType:
                 "column_type",
                 ).v_scale = .25
 
-        if not hasattr(obj, "dist"):
-            obj.addProperty(
-                "App::PropertyFloat",
-                "dist",
-                "column_type",
-                )
-        obj.setEditorMode("dist", 2)
-
         if not hasattr(obj, "composite_deck"):
             obj.addProperty(
                 "App::PropertyBool",
@@ -544,7 +536,7 @@ class ColumnType:
         sections_obj_name = []
         for i in range(len(obj.heights)):
             level = (levels[i] + obj.heights[i] / 2) * scale
-            section = make_section(obj.sections_name[i], dist=obj.dist, level=level, scale=obj.v_scale)
+            section = make_section(obj.sections_name[i], pa_baz=obj.pa_baz, level=level, scale=obj.v_scale)
             section.Placement.Base = obj.Placement.Base
             section.Placement.Base.x += 500
             sections_obj_name.append(section.Name)
@@ -617,11 +609,11 @@ class ColumnType:
                     break
 
         if obj.pa_baz:
-            obj.dist = bf
+            dist = bf
         else:
-            obj.dist = 0
+            dist = 0
         ipe, edge = create_ipe(bf, d, tw, tf)
-        deltax = bf + obj.dist
+        deltax = bf + dist
         ipe.Placement.Base.x = deltax / 2
         edge.Placement.Base.x = deltax / 2
         ipe2 = ipe.copy()
@@ -715,7 +707,6 @@ class ColumnTableModel(QAbstractTableModel):
         self.levels_name = []
         self.level_obj = None
         self.sections_name = []
-        self.all_sections = set()
 
     def headerData(self, section, orientation, role=Qt.DisplayRole):
         if role == Qt.TextAlignmentRole:
@@ -771,7 +762,6 @@ class ColumnTableModel(QAbstractTableModel):
             col = index.column()
             row = index.row()
             if col == 1:
-                self.all_sections.add(str(value))
                 self.sections_name[row] = str(value)
             self.emit(SIGNAL("dataChanged(QModelIndex,QModelIndex)"),index, index)
             return True
@@ -788,10 +778,6 @@ class ColumnDelegate(QItemDelegate):
         if col == 1:
             combobox = QComboBox(parent)
             size = index.model().ui.ipe_size.currentText()
-            # # sections = set()
-            # for section_name in index.model().sections_name:
-            #     if f"IPE{size}" in section_name:
-            #         sections.add(section_name)
             sections = index.model().level_obj.sections_name
             sections_with_current_size = [section for section in sections if f"IPE{size}" in section]
             if not sections_with_current_size:
@@ -803,7 +789,10 @@ class ColumnDelegate(QItemDelegate):
             return QItemDelegate.createEditor(self, parent, option, index)
 
     # def setEditorData(self, editor, index):
-    #     editor.setValue()
+    #     row = index.row()
+    #     col = index.column()
+    #     # value = index.model().items[row][column]
+    #         editor.setCurrentIndex(index.row())
 
     def setModelData(self, editor, model, index):
         col = index.column()
@@ -824,8 +813,6 @@ class Ui:
 
     def setupUi(self):
         self.add_connections()
-        # icon_path = os.path.join(
-        #     os.path.dirname(__file__), 'Resources/icons/')
         self.model = ColumnTableModel()
         json_file=os.path.join(FreeCAD.getUserAppDataDir(), 'column.json')
         self.model.level_obj = FreeCAD.ActiveDocument.Levels
@@ -844,6 +831,10 @@ class Ui:
         self.set_levels_name()
         self.form.tableView.setModel(self.model)
         self.form.tableView.setItemDelegate(ColumnDelegate(self.form))
+
+    def resizeColumns(self, tableView=None):
+        for column in (0, 1):
+            self.form.tableView.resizeColumnToContents(column)
 
     def fill_form(self, col_obj):
         size = col_obj.size

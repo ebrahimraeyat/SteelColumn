@@ -49,13 +49,6 @@ class Section:
                 "section",
             )
 
-        if not hasattr(obj, "dist"):
-            obj.addProperty(
-                "App::PropertyFloat",
-                "dist",
-                "section",
-                )
-
         if not hasattr(obj, "pa_baz"):
             obj.addProperty(
                 "App::PropertyBool",
@@ -101,12 +94,12 @@ class Section:
                     tf = float(row["TF"])
                     break
         if obj.n == 3 or obj.pa_baz:
-            obj.dist = bf
+            dist = bf
         else:
-            obj.dist = 0
+            dist = 0
         doc = FreeCAD.ActiveDocument
         ipe, _ = create_ipe(bf, d, tw, tf)
-        deltax = bf + obj.dist
+        deltax = bf + dist
 
         # if obj.n == 2:
         ipe.Placement.Base.x = deltax / 2
@@ -268,7 +261,7 @@ def make_section_gui(n, size, flang_plate_size, web_plate_size, pa_baz):
     return obj
 
 
-def make_section(name, dist=0, level=0, scale=.25):
+def make_section(name, pa_baz=False, level=0, scale=.25):
     n, size, flang_plate_size, web_plate_size = decompose_section_name(name)
     obj = FreeCAD.ActiveDocument.addObject("Part::Part2DObjectPython", "section")
     Section(obj)
@@ -278,7 +271,7 @@ def make_section(name, dist=0, level=0, scale=.25):
     obj.size = size
     obj.flang_plate_size = flang_plate_size
     obj.web_plate_size = web_plate_size
-    obj.dist = dist
+    obj.pa_baz = pa_baz
     obj.level = level
     obj.scale = scale
     return obj

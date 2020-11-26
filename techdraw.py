@@ -83,7 +83,7 @@ def add_section_edges_to_dxf(ct, dxfattribs, block, z, scale):
 				(x, y),
 				align="MIDDLE_LEFT")
 
-		if all((o.dist > 0, not o.flang_plate_size, o.n==2)):
+		if all((o.pa_baz, not o.flang_plate_size, o.n==2)):
 			bw, bh, bt, bdist = ct.nardebani_plate_size
 			x = bb.Center.x * scale
 			y = bb.ZMax * scale + z
