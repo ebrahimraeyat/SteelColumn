@@ -343,7 +343,9 @@ class Ui:
             self.form.section_list.addItem(name)
 
     def remove_section(self):
-        pass
+        i = self.form.section_list.currentRow()
+        item = self.form.section_list.takeItem(i)
+        self.form.section_list.removeItemWidget(item)
 
     def current_form_values(self):
         n = int(self.form.number.currentText())
