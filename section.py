@@ -100,8 +100,10 @@ class Section:
                     tw = float(row["TW"])
                     tf = float(row["TF"])
                     break
-        if obj.n == 3:
+        if obj.n == 3 or obj.pa_baz:
             obj.dist = bf
+        else:
+            obj.dist = 0
         doc = FreeCAD.ActiveDocument
         ipe, _ = create_ipe(bf, d, tw, tf)
         deltax = bf + obj.dist
