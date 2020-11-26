@@ -3,10 +3,14 @@ import Part
 from FreeCAD import Vector
 import ArchProfile
 from Arch import makeStructure
-import Draft
 import csv
 from os.path import join, dirname, abspath
+import os
 from columnTypeFunctions import *
+# from PySide2.QtWidgets import *
+# from PySide2.QtCore import *
+from PySide2.QtGui import *
+import section_config as config
 
 
 class Section:
@@ -31,10 +35,10 @@ class Section:
                 "section",
             )
 
-        if not hasattr(obj, "flange_plate_size"):
+        if not hasattr(obj, "flang_plate_size"):
             obj.addProperty(
                 "App::PropertyIntegerList",
-                "flange_plate_size",
+                "flang_plate_size",
                 "section",
             )
 
@@ -49,6 +53,13 @@ class Section:
             obj.addProperty(
                 "App::PropertyFloat",
                 "dist",
+                "section",
+                )
+
+        if not hasattr(obj, "pa_baz"):
+            obj.addProperty(
+                "App::PropertyBool",
+                "pa_baz",
                 "section",
                 )
 
@@ -89,11 +100,11 @@ class Section:
                     tw = float(row["TW"])
                     tf = float(row["TF"])
                     break
-
-        dist = obj.dist
+        if obj.n == 3:
+            obj.dist = bf
         doc = FreeCAD.ActiveDocument
         ipe, _ = create_ipe(bf, d, tw, tf)
-        deltax = bf + dist
+        deltax = bf + obj.dist
 
         # if obj.n == 2:
         ipe.Placement.Base.x = deltax / 2
@@ -105,51 +116,37 @@ class Section:
         if obj.n == 3:
             ipe3 = ipe.copy()
             ipe3.Placement.Base.x = 0
-            # ipe2 = Draft.move(ipe, FreeCAD.Vector(-deltax, 0, 0), copy=True)
-            # ipe3 = Draft.move(ipe, FreeCAD.Vector(-2 * deltax, 0, 0), copy=True)
             shapes.append(ipe3)
             name = f"3{sectionType}{sectionSize}"
 
-        if obj.flange_plate_size:
-            width = obj.flange_plate_size[0]
-            height = obj.flange_plate_size[1]
+        if obj.flang_plate_size:
+            width = obj.flang_plate_size[0]
+            height = obj.flang_plate_size[1]
             y = (d + height) / 2
             plt, _ = create_plate(width, height)
             plt.Placement.Base.y = y
-            # plt.ViewObject.ShapeColor = (0.0, 0.0, 1.0)
-            # gui.getObject(plt.Label).DisplayMode = "Wireframe"
             plb = plt.copy()
             plb.Placement.Base.y = -y
-            # group.addObjects([plt, plb])
             shapes.extend([plt, plb])
-            name += f"PL{width}X{height}"
+            name += f"FPL{width}X{height}"
 
         if obj.web_plate_size:
             width = obj.web_plate_size[0]
             height = obj.web_plate_size[1]
-            # x = ipe.Shape.BoundBox.Center.x + (ipe.WebThickness.Value + height) / 2
             x = ipe.Placement.Base.x + (tw + height) / 2
 
             plwr, _ = create_plate(height, width)
             plwr.Placement.Base.x = x
 
-            # gui.getObject(plwr.Label).ShapeColor = (0.0, 1.0, 0.0)
-            # gui.getObject(plwr.Label).DisplayMode = "Wireframe"
             plwl = plwr.copy()
             plwl.Placement.Base.x = -x
-            # group.addObjects([plwr, plwl])
             shapes.extend([plwr, plwl])
-            name += f"W{width}X{height}"
+            name += f"WPL{width}X{height}"
 
         Components = Part.makeCompound(shapes)
-        # Components.scale = obj.scale
         obj.Shape = Components
         obj.Placement.Base.z = obj.level
         obj.Placement.Rotation = FreeCAD.Rotation(FreeCAD.Vector(1,0,0),90)
-        # for o in (obj.core_section + obj.flange_plate + obj.web_plate):
-        #     hide(o)
-        #     print(o.Label)
-        #     FreeCAD.ActiveDocument.removeObject(o.Label)
         obj.Label = name
         obj.name = name
         
@@ -249,31 +246,152 @@ class ViewProviderSection:
         FreeCAD.Console.PrintMessage("Change View property: " + str(prop) + "\n")
 
 
+def make_section_gui(n, size, flang_plate_size, web_plate_size, pa_baz):
+    obj = FreeCAD.ActiveDocument.addObject("Part::Part2DObjectPython", "section")
+    Section(obj)
+    ViewProviderSection(obj.ViewObject)
+    name = f"{n}IPE{size}"
+    if flang_plate_size:
+        bf, tf = flang_plate_size
+        name += f"FPL{bf}X{tf}"
+    if web_plate_size:
+        bw, tw = web_plate_size
+        name += f"WPL{bw}X{tw}"
+    obj.Label = name
+    obj.n = n
+    obj.size = size
+    obj.flang_plate_size = flang_plate_size
+    obj.web_plate_size = web_plate_size
+    obj.pa_baz = pa_baz
+    return obj
 
 
 def make_section(name, dist=0, level=0, scale=.25):
-    # for o in FreeCAD.ActiveDocument.Objects:
-    #     if o.Label == name.upper():
-    #         return
-    n, size, flange_plate_size, web_plate_size = decompose_section_name(name)
-    FreeCAD.Console.PrintMessage(f"{n}, {size}, {flange_plate_size}, {web_plate_size}")
+    n, size, flang_plate_size, web_plate_size = decompose_section_name(name)
     obj = FreeCAD.ActiveDocument.addObject("Part::Part2DObjectPython", "section")
     Section(obj)
     ViewProviderSection(obj.ViewObject)
     obj.Label = name
     obj.n = n
     obj.size = size
-    obj.flange_plate_size = flange_plate_size
+    obj.flang_plate_size = flang_plate_size
     obj.web_plate_size = web_plate_size
     obj.dist = dist
     obj.level = level
     obj.scale = scale
-    # FreeCAD.ActiveDocument.recompute()
-    # FreeCAD.ActiveDocument.recompute()
     return obj
 
-if __name__ == '__main__':
-    make_section("3IPE18pl200x10w130x5")
-    make_section("3IPE18pl200x10", 0, 3000)
 
+class Ui:
+    def __init__(self, level_obj):
+        steel_dir = os.path.dirname(__file__)
+        self.form = FreeCADGui.PySideUic.loadUi(steel_dir + '/Resources/ui/sections.ui')
+        self.form.add_button.setIcon(QPixmap(steel_dir + "/Resources/icons/add.svg"))
+        self.form.remove_button.setIcon(QPixmap(steel_dir + "/Resources/icons/remove.svg"))
+        self.level_obj = level_obj
+        self.json_file = os.path.join(FreeCAD.getUserAppDataDir(), 'sections_name.json')
+        self.load_config()
+
+    def setupUi(self):
+        self.add_connections()
+        sections_name = self.level_obj.sections_name
+        self.form.section_list.addItems(sections_name)
+        FreeCAD.newDocument()
+        FreeCADGui.ActiveDocument.ActiveView.viewFront()
+        self.section_obj = make_section_gui(2, 14, [], [], False)
+        FreeCAD.ActiveDocument.recompute()
+        FreeCADGui.SendMsgToActiveView("ViewFit")
+
+    def add_connections(self):
+        self.form.ipe_size.currentIndexChanged.connect(self.reset_section_obj)
+        self.form.number.currentIndexChanged.connect(self.reset_section_obj)
+        self.form.bf.valueChanged.connect(self.reset_section_obj)
+        self.form.tf.valueChanged.connect(self.reset_section_obj)
+        self.form.bw.valueChanged.connect(self.reset_section_obj)
+        self.form.tw.valueChanged.connect(self.reset_section_obj)
+        self.form.pa_baz.stateChanged.connect(self.reset_section_obj)
+        self.form.flang_plate.toggled.connect(self.reset_section_obj)
+        self.form.web_plate.toggled.connect(self.reset_section_obj)
+        self.form.add_button.clicked.connect(self.add_section)
+        self.form.remove_button.clicked.connect(self.remove_section)
+
+
+    def reset_section_obj(self):
+        n, size, pa_baz, bf, tf, bw, tw, flang_plate, web_plate = self.current_form_values()
+        obj = self.section_obj
+        obj.n = n
+        obj.size = size
+        obj.pa_baz = pa_baz
+        
+        if flang_plate:
+            obj.flang_plate_size = [bf, tf]
+        else:
+            obj.flang_plate_size = []
+        if web_plate:
+            obj.web_plate_size = [bw, tw]
+        else:
+            obj.web_plate_size = []
+        FreeCAD.ActiveDocument.recompute()
+        FreeCADGui.SendMsgToActiveView("ViewFit")
+
+    def add_section(self):
+        name = self.section_obj.name
+        sections_name = [self.form.section_list.item(i).text() for i in range(self.form.section_list.count())]
+        if not name in sections_name:
+            self.form.section_list.addItem(name)
+
+    def remove_section(self):
+        pass
+
+    def current_form_values(self):
+        n = int(self.form.number.currentText())
+        size = int(self.form.ipe_size.currentText())
+        pa_baz = self.form.pa_baz.isChecked()
+        bf = self.form.bf.value() * 10
+        tf = self.form.tf.value()
+        bw = self.form.bw.value() * 10
+        tw = self.form.tw.value()
+        flang_plate = self.form.flang_plate.isChecked()
+        web_plate = self.form.web_plate.isChecked()
+
+        return n, size, pa_baz, bf, tf, bw, tw, flang_plate, web_plate
+
+    def save_config(self):
+        sections_name = self.level_obj.sections_name
+        config.save(sections_name, self.json_file)
+
+    def load_config(self):
+        if os.path.exists(self.json_file):
+            self.level_obj.sections_name = config.load(self.json_file)
+
+
+    def accept(self):
+        name = FreeCAD.ActiveDocument.Name
+        FreeCAD.closeDocument(name)
+        sections_name = [self.form.section_list.item(i).text() for i in range(self.form.section_list.count())]
+        FreeCAD.ActiveDocument.Levels.sections_name = sections_name
+        self.save_config()
+        FreeCADGui.Control.closeDialog(self)
+
+
+    def reject(self):
+        self.accept()
+
+
+def create_sections():
+    level_obj = FreeCAD.ActiveDocument.Levels
+    ui = Ui(level_obj)
+    # ui.setupUi()
+    # ui.form.exec_()
+    FreeCADGui.Control.showDialog(ui)
+    if ui.setupUi():
+        FreeCADGui.Control.closeDialog(ui)
+    FreeCAD.ActiveDocument.recompute()
+
+
+
+
+if __name__ == '__main__':
+    create_sections()
+    
 

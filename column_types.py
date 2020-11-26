@@ -31,6 +31,12 @@ class ColumnTypes:
 				"column_types",
 				)
 
+		if not hasattr(obj, "sections_name"):
+			obj.addProperty(
+				"App::PropertyStringList",
+				"sections_name",
+				"column_types")
+
 		if not hasattr(obj, "Base"):
 			obj.addProperty(
 				"App::PropertyLink",
@@ -190,6 +196,9 @@ class ViewProviderColumnTypes(ArchComponent.ViewProviderComponent):
 	def unsetEdit(self, vobj, mode):
 		FreeCADGui.Control.closeDialog()
 		return
+
+	def doubleClicked(self,vobj):
+		self.setEdit(vobj)
 
 	def __getstate__(self):
 		return None

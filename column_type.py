@@ -179,7 +179,7 @@ class ColumnType:
                 "dist",
                 "column_type",
                 )
-        obj.setEditorMode("dist", 1)
+        obj.setEditorMode("dist", 2)
 
         if not hasattr(obj, "composite_deck"):
             obj.addProperty(
@@ -620,7 +620,6 @@ class ColumnType:
             obj.dist = bf
         else:
             obj.dist = 0
-
         ipe, edge = create_ipe(bf, d, tw, tf)
         deltax = bf + obj.dist
         ipe.Placement.Base.x = deltax / 2
@@ -754,10 +753,6 @@ class ColumnTableModel(QAbstractTableModel):
         if col == 0:
             return self.levels_name[row]
         elif col == 1:
-            # if row <= len(self.sections_name):
-            #     print(f"row = {row}")
-            #     self.sections_name.append(section_name)
-            #     self.all_sections.add(section_name)
             return self.sections_name[row]
 
 
@@ -797,9 +792,12 @@ class ColumnDelegate(QItemDelegate):
             # for section_name in index.model().sections_name:
             #     if f"IPE{size}" in section_name:
             #         sections.add(section_name)
-            sections = index.model().all_sections
-            combobox.addItems(sections)
-            combobox.setEditable(True)
+            sections = index.model().level_obj.sections_name
+            sections_with_current_size = [section for section in sections if f"IPE{size}" in section]
+            if not sections_with_current_size:
+                sections_with_current_size = [f"2IPE{size}"]
+            combobox.addItems(sections_with_current_size)
+            # combobox.setEditable(True)
             return combobox
         else:
             return QItemDelegate.createEditor(self, parent, option, index)
@@ -874,7 +872,7 @@ class Ui:
 
 
     def add_connections(self):
-        self.form.ipe_size.currentIndexChanged.connect(self.reset_model)
+        # self.form.ipe_size.currentIndexChanged.connect(self.reset_model)
         self.form.first_level_combo.currentIndexChanged.connect(self.set_levels_name)
         self.form.last_level_combo.currentIndexChanged.connect(self.set_levels_name)
 
