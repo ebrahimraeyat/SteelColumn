@@ -863,7 +863,7 @@ class Ui:
 
 
     def add_connections(self):
-        # self.form.ipe_size.currentIndexChanged.connect(self.reset_model)
+        self.form.ipe_size.currentIndexChanged.connect(self.reset_model)
         self.form.first_level_combo.currentIndexChanged.connect(self.set_levels_name)
         self.form.last_level_combo.currentIndexChanged.connect(self.set_levels_name)
 
