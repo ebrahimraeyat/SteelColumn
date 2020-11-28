@@ -684,6 +684,8 @@ def make_column_type(
     ViewProviderColumnType(obj.ViewObject)
     obj.levels_index = levels_index
     obj.level_obj = level_obj
+    n = len(level_obj.columns_names)
+    obj.Label = f"C{n + 1}"
     # obj.heights = heights
     obj.sections_name = sections_name
     # obj.base_level = base_level
