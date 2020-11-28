@@ -261,11 +261,12 @@ def make_section_gui(n, size, flang_plate_size, web_plate_size, pa_baz):
     return obj
 
 
-def make_section(name, pa_baz=False, level=0, scale=.25):
+def make_section(name, pa_baz=False, level=0, scale=.25, obj=None):
     n, size, flang_plate_size, web_plate_size = decompose_section_name(name)
-    obj = FreeCAD.ActiveDocument.addObject("Part::Part2DObjectPython", "section")
-    Section(obj)
-    ViewProviderSection(obj.ViewObject)
+    if not obj:
+        obj = FreeCAD.ActiveDocument.addObject("Part::Part2DObjectPython", "section")
+        Section(obj)
+        ViewProviderSection(obj.ViewObject)
     obj.Label = name
     obj.n = n
     obj.size = size
@@ -309,6 +310,14 @@ class Ui:
         self.form.web_plate.toggled.connect(self.reset_section_obj)
         self.form.add_button.clicked.connect(self.add_section)
         self.form.remove_button.clicked.connect(self.remove_section)
+        self.form.section_list.itemClicked.connect(self.itemClicked)
+
+    def itemClicked(self, item):
+        name = item.text()
+        make_section(name, obj=self.section_obj)
+        FreeCAD.ActiveDocument.recompute()
+        FreeCADGui.SendMsgToActiveView("ViewFit")
+
 
 
     def reset_section_obj(self):
