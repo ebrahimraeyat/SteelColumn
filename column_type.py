@@ -938,7 +938,24 @@ class Ui:
         lev_j = self.form.last_level_combo.currentIndex()
         levels_index = list(range(lev_i, lev_j + 1))
         if bool(self.col_obj):
-            remove_column(self.col_obj, move_other=False)
+            self.col_obj.sections_name = sections_name
+            self.col_obj.size = str(ipe_size)
+            self.col_obj.extend_length = extend_length
+            self.col_obj.pa_baz = pa_baz
+            self.col_obj.connection_ipe_lengths = [connection_ipe_length, connection_ipes_above_length]
+            self.col_obj.extend_plate_len_above = extend_plate_len_above
+            print(self.col_obj.extend_plate_len_above)
+            print(self.col_obj.extend_plate_len_below)
+            self.col_obj.extend_plate_len_below = extend_plate_len_below
+            print(self.col_obj.extend_plate_len_below)
+            print(self.col_obj.N)
+            self.col_obj.N = N
+            print(self.col_obj.N)
+            FreeCAD.ActiveDocument.recompute()
+            FreeCAD.ActiveDocument.recompute()
+            return
+
+
         col = make_column_type(
             levels_index,
             sections_name,
