@@ -740,15 +740,14 @@ class ColumnTableModel(QAbstractTableModel):
             return Qt.Unchecked
 
     def flags(self, index):
-        # if not index.isValid():
-        #     return Qt.ItemIsEnabled
-        # col = index.column()
-        # if col == 0:
-        #     return Qt.ItemIsEditable | Qt.ItemIsUserCheckable
+        if not index.isValid():
+            return Qt.ItemIsEnabled
+        col = index.column()
+        if col == 0:
+            return Qt.ItemIsEnabled | Qt.ItemIsUserCheckable
 
         return Qt.ItemFlags(
-            QAbstractTableModel.flags(self, index) | Qt.ItemIsEnabled |
-            Qt.ItemIsEditable | Qt.ItemIsUserCheckable)
+            QAbstractTableModel.flags(self, index) | Qt.ItemIsEditable)
 
     def data(self, index, role=Qt.DisplayRole):
 

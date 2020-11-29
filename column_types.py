@@ -264,6 +264,9 @@ class LevelTableModel(QAbstractTableModel):
 		if i == 0 and col == HEIGHT:
 			return Qt.ItemIsEnabled
 
+		if col == STORY:
+			return Qt.ItemIsEnabled
+
 		return Qt.ItemFlags(
 			QAbstractTableModel.flags(self, index) |
 			Qt.ItemIsEditable)
