@@ -91,10 +91,10 @@ class ColumnType:
             )
         obj.setEditorMode("levels_name", 1)
 
-        if not hasattr(obj, "levels_index"):
+        if not hasattr(obj, "levels_state"):
             obj.addProperty(
                 "App::PropertyIntegerList",
-                "levels_index",
+                "levels_state",
                 "Levels",
                 )
         # obj.setEditorMode("levels_index", 1)
@@ -275,28 +275,35 @@ class ColumnType:
         BLUE = (0.0, 0.0, 1.0)
 
         scale = 1000 * obj.v_scale
-        # shapes = []
+
         levels = []
-        for i in obj.levels_index:
-            if i < len(obj.level_obj.levels):
+        for i, state in enumerate(obj.levels_state):
+            if state:
                 levels.append(obj.level_obj.levels[i])
+                last_level_index = i
+
+        simplify_sections_name = []
+        simplify_levels =[]
+        for i, section_name in enumerate(obj.sections_name):
+            if obj.levels_state[i]:
+                
+                if simplify_sections_name:
+                    if section_name != simplify_sections_name[-1]:
+                        if i != last_level_index:
+                            simplify_sections_name.append(section_name)
+                        simplify_levels.append(obj.level_obj.levels[i] * scale)
+                else:
+                    simplify_sections_name.append(section_name)
+                    simplify_levels.append(obj.level_obj.levels[i] * scale)
+        if simplify_levels[-1] != obj.level_obj.levels[last_level_index] * scale:
+            simplify_levels.append(obj.level_obj.levels[last_level_index] * scale)
+
         obj.base_level = levels[0]
         heights = []
         for i in range(len(levels[:-1])):
             heights.append(levels[i + 1] - levels[i])
         obj.heights = heights
-        # levels = [obj.base_level]
-        # for height in obj.heights:
-        #     levels.append(levels[-1] + height)
         obj.levels = [lev  * scale for lev in levels]
-
-        simplify_sections_name = [obj.sections_name[0]]
-        simplify_levels =[obj.base_level * scale]
-        for i, section_name in enumerate(obj.sections_name):
-            if section_name != simplify_sections_name[-1]:
-                simplify_sections_name.append(section_name)
-                simplify_levels.append(levels[i] * scale)
-        simplify_levels.append(levels[-1] * scale)
 
 
         merge_flang_plates = []
@@ -536,7 +543,8 @@ class ColumnType:
         sections_obj_name = []
         for i in range(len(obj.heights)):
             level = (levels[i] + obj.heights[i] / 2) * scale
-            section = make_section(obj.sections_name[i], pa_baz=obj.pa_baz, level=level, scale=obj.v_scale)
+            index = obj.level_obj.levels.index(levels[i])
+            section = make_section(obj.sections_name[index], pa_baz=obj.pa_baz, level=level, scale=obj.v_scale)
             section.Placement.Base = obj.Placement.Base
             section.Placement.Base.x += 500
             sections_obj_name.append(section.Name)
@@ -666,7 +674,7 @@ class ViewProviderColumnType:
 
 
 def make_column_type(
-        levels_index,
+        levels_state,
         sections_name,
         level_obj,
         size=16,
@@ -682,13 +690,11 @@ def make_column_type(
     obj = FreeCAD.ActiveDocument.addObject("Part::FeaturePython", "column_type")
     ColumnType(obj)
     ViewProviderColumnType(obj.ViewObject)
-    obj.levels_index = levels_index
+    obj.levels_state = levels_state
     obj.level_obj = level_obj
     n = len(level_obj.columns_names)
     obj.Label = f"C{n + 1}"
-    # obj.heights = heights
     obj.sections_name = sections_name
-    # obj.base_level = base_level
     obj.extend_length = extend_length
     obj.extend_plate_len_above = extend_plate_len_above
     obj.extend_plate_len_below = extend_plate_len_below
@@ -703,12 +709,12 @@ def make_column_type(
 
 class ColumnTableModel(QAbstractTableModel):
 
-    def __init__(self):
+    def __init__(self, level_obj):
         super().__init__()
-        self.ui = None
+        self.level_obj = level_obj
         self.levels_name = []
-        self.level_obj = None
         self.sections_name = []
+        self.levels_state = []
 
     def headerData(self, section, orientation, role=Qt.DisplayRole):
         if role == Qt.TextAlignmentRole:
@@ -727,59 +733,72 @@ class ColumnTableModel(QAbstractTableModel):
         if orientation == Qt.Vertical:
             return str(section)
 
+    def checkState(self, row):
+        if self.levels_state[row]:
+            return Qt.Checked
+        else:
+            return Qt.Unchecked
+
     def flags(self, index):
-        if not index.isValid():
-            return Qt.ItemIsEnabled
-        col = index.column()
-        if col == 0:
-            return Qt.ItemIsEnabled
+        # if not index.isValid():
+        #     return Qt.ItemIsEnabled
+        # col = index.column()
+        # if col == 0:
+        #     return Qt.ItemIsEditable | Qt.ItemIsUserCheckable
 
         return Qt.ItemFlags(
-            QAbstractTableModel.flags(self, index) |
-            Qt.ItemIsEditable)
+            QAbstractTableModel.flags(self, index) | Qt.ItemIsEnabled |
+            Qt.ItemIsEditable | Qt.ItemIsUserCheckable)
 
     def data(self, index, role=Qt.DisplayRole):
+
         if not index.isValid():
             return
         row = index.row()
         col = index.column()
-        if col == 0:
-            return self.levels_name[row]
-        elif col == 1:
-            return self.sections_name[row]
+        if role == Qt.DisplayRole:
+            if col == 0:
+                return self.levels_name[row]
+            elif col == 1:
+                return self.sections_name[row]
+        if role == Qt.CheckStateRole and col == 0:
+            return self.checkState(row)
+        return None
 
+    def setData(self, index, value, role=Qt.EditRole):
+        if not index.isValid():
+            return False
+        col = index.column()
+        row = index.row()
+        if role == Qt.CheckStateRole and col == 0:
+            self.levels_state[row] = value
+            self.dataChanged.emit(index, index)
+            return True
+        if role == Qt.EditRole and col == 1:
+            self.sections_name[row] = str(value)
+            self.dataChanged.emit(index, index)
+            return True
+        return False
 
     def rowCount(self, index=QModelIndex()):
-        if self.ui:
-            level_i = self.ui.first_level_combo.currentIndex()
-            level_j = self.ui.last_level_combo.currentIndex()
-            return level_j - level_i
-        return 0
+        return len(self.levels_name)
 
     def columnCount(self, index=QModelIndex()):
         return 2
 
-    def setData(self, index, value, role=Qt.EditRole):
-        if index.isValid():
-            col = index.column()
-            row = index.row()
-            if col == 1:
-                self.sections_name[row] = str(value)
-            self.emit(SIGNAL("dataChanged(QModelIndex,QModelIndex)"),index, index)
-            return True
-        return False
 
 
 class ColumnDelegate(QItemDelegate):
 
     def __init__(self, parent=None):
         super().__init__(parent)
+        self.ui = parent
 
     def createEditor(self, parent, option, index):
         col = index.column()
         if col == 1:
             combobox = QComboBox(parent)
-            size = index.model().ui.ipe_size.currentText()
+            size = self.ui.ipe_size.currentText()
             sections = index.model().level_obj.sections_name
             sections_with_current_size = [section for section in sections if f"IPE{size}" in section]
             if not sections_with_current_size:
@@ -815,22 +834,21 @@ class Ui:
 
     def setupUi(self):
         self.add_connections()
-        self.model = ColumnTableModel()
+        self.level_obj = FreeCAD.ActiveDocument.Levels
+        self.model = ColumnTableModel(self.level_obj)
         json_file=os.path.join(FreeCAD.getUserAppDataDir(), 'column.json')
-        self.model.level_obj = FreeCAD.ActiveDocument.Levels
-        self.form.first_level_combo.addItems(self.model.level_obj.levels_name)
-        self.form.last_level_combo.addItems(self.model.level_obj.levels_name)
+        self.model.levels_name = FreeCAD.ActiveDocument.Levels.levels_name
         if not self.col_obj:
             self.load_config(json_file)
             size = self.form.ipe_size.currentText()
-            self.model.sections_name = [f"2IPE{size}"] * len(self.model.level_obj.heights)
-            self.form.last_level_combo.setCurrentIndex(len(self.model.level_obj.levels_name) - 1)
+            self.model.sections_name = [f"2IPE{size}"] * (len(self.model.levels_name))
+            self.model.levels_state = [1] * len(self.model.levels_name)
         else:
             self.fill_form(self.col_obj)
             self.model.sections_name = self.col_obj.sections_name
+            self.model.levels_state = self.col_obj.levels_state
 
-        self.model.ui = self.form
-        self.set_levels_name()
+        # self.set_levels_name()
         self.form.tableView.setModel(self.model)
         self.form.tableView.setItemDelegate(ColumnDelegate(self.form))
 
@@ -848,10 +866,6 @@ class Ui:
         extend_plate_len_below = col_obj.extend_plate_len_below
         connection_ipe_length = col_obj.connection_ipe_lengths[0]
         connection_ipe_above = col_obj.connection_ipe_lengths[1]
-        level_obj = col_obj.level_obj
-        levels_index = col_obj.levels_index
-        lev_i = levels_index[0]
-        lev_j = levels_index[-1]
         self.form.ipe_size.setCurrentIndex(index)
         self.form.extend_length.setValue(float(extend_length))
         self.form.extend_plate_len_above.setValue(float(extend_plate_len_above))
@@ -860,25 +874,10 @@ class Ui:
         self.form.connection_ipe_above.setValue(float(connection_ipe_above))
         self.form.pa_baz.setChecked(pa_baz)
         self.form.number.setValue(int(N))
-        self.form.first_level_combo.setCurrentIndex(lev_i)
-        self.form.last_level_combo.setCurrentIndex(lev_j)
 
 
     def add_connections(self):
         self.form.ipe_size.currentIndexChanged.connect(self.reset_model)
-        self.form.first_level_combo.currentIndexChanged.connect(self.set_levels_name)
-        self.form.last_level_combo.currentIndexChanged.connect(self.set_levels_name)
-
-    def set_levels_name(self):
-        level_i = self.form.first_level_combo.currentIndex()
-        level_j = self.form.last_level_combo.currentIndex()
-        levels_name = []
-        for i in range(level_i, level_j + 1):
-            name = self.form.first_level_combo.itemText(i)
-            levels_name.append(name)
-        self.model.beginResetModel()
-        self.model.levels_name = levels_name
-        self.model.endResetModel()
 
     def reset_model(self):
         self.model.beginResetModel()
@@ -913,14 +912,15 @@ class Ui:
         # self.model.beginResetModel()
         ipe_size = int(self.form.ipe_size.currentText())
         sections_name = []
+        levels_state = self.model.levels_state
         for row in range(self.model.rowCount()):
             index = self.model.index(row, 1)
             name = self.model.data(index)
             sections_name.append(name)
         if not self.col_obj:
             dx = self.form.deltax.value()
-            if len(self.model.level_obj.columns_names) >= 1:
-                last_column_name = self.model.level_obj.columns_names[-1]
+            if len(self.level_obj.columns_names) >= 1:
+                last_column_name = self.level_obj.columns_names[-1]
                 last_col = FreeCAD.ActiveDocument.getObject(last_column_name)
                 x = last_col.Placement.Base.x + dx * 1000
             else:
@@ -930,38 +930,30 @@ class Ui:
         extend_length = self.form.extend_length.value()
         extend_plate_len_above = self.form.extend_plate_len_above.value()
         extend_plate_len_below = self.form.extend_plate_len_below.value()
-
         connection_ipe_length = self.form.connection_ipe_length.value()
         connection_ipes_above_length = self.form.connection_ipe_above.value()
         pos = (x, 0)
         pa_baz = self.form.pa_baz.isChecked()
         N = self.form.number.value()
-        lev_i = self.form.first_level_combo.currentIndex()
-        lev_j = self.form.last_level_combo.currentIndex()
-        levels_index = list(range(lev_i, lev_j + 1))
         if bool(self.col_obj):
+            self.col_obj.levels_state = levels_state
             self.col_obj.sections_name = sections_name
             self.col_obj.size = str(ipe_size)
             self.col_obj.extend_length = extend_length
             self.col_obj.pa_baz = pa_baz
             self.col_obj.connection_ipe_lengths = [connection_ipe_length, connection_ipes_above_length]
             self.col_obj.extend_plate_len_above = extend_plate_len_above
-            print(self.col_obj.extend_plate_len_above)
-            print(self.col_obj.extend_plate_len_below)
             self.col_obj.extend_plate_len_below = extend_plate_len_below
-            print(self.col_obj.extend_plate_len_below)
-            print(self.col_obj.N)
             self.col_obj.N = N
-            print(self.col_obj.N)
             FreeCAD.ActiveDocument.recompute()
             FreeCAD.ActiveDocument.recompute()
             return
 
 
         col = make_column_type(
-            levels_index,
+            levels_state,
             sections_name,
-            self.model.level_obj,
+            self.level_obj,
             size=ipe_size,
             extend_length=extend_length,
             pos=pos,
@@ -971,10 +963,10 @@ class Ui:
             extend_plate_len_below=extend_plate_len_below,
             N=N,
             )
-        col_names = self.model.level_obj.columns_names
+        col_names = self.level_obj.columns_names
         col_names.append(col.Name)
-        self.model.level_obj.columns_names = col_names
-        self.model.level_obj.Proxy.execute(self.model.level_obj)
+        self.level_obj.columns_names = col_names
+        self.level_obj.Proxy.execute(self.level_obj)
         FreeCAD.ActiveDocument.recompute()
         FreeCAD.ActiveDocument.recompute()
         # self.model.endResetModel()
