@@ -266,16 +266,6 @@
       </layout>
      </item>
      <item>
-      <widget class="QCheckBox" name="pa_baz">
-       <property name="layoutDirection">
-        <enum>Qt::LeftToRight</enum>
-       </property>
-       <property name="text">
-        <string>Pa Baz</string>
-       </property>
-      </widget>
-     </item>
-     <item>
       <spacer name="verticalSpacer">
        <property name="orientation">
         <enum>Qt::Vertical</enum>

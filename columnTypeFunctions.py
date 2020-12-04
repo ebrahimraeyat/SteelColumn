@@ -13,9 +13,13 @@ def decompose_section_name(name):
     size = int(name[4:6])
     fi = name.find("FPL")
     wi = name.find("WPL")
+    cc = name.find("CC")
     if fi != -1:
         if wi == -1:
-            flang_plate = name[fi:]
+            if cc != -1:
+                flang_plate = name[fi:cc]
+            else:
+                flang_plate = name[fi:]
         else:
             flang_plate = name[fi: wi]
         flang_plate = flang_plate.lstrip("FPL")
@@ -30,8 +34,11 @@ def decompose_section_name(name):
         web_plate_dim = [int(i) for i in web_plate]
     else:
         web_plate_dim = []
-
-    return(n, size, flang_plate_dim, web_plate_dim)
+    if cc == -1:
+        pa_baz = False
+    else:
+        pa_baz = True
+    return(n, size, flang_plate_dim, web_plate_dim, pa_baz)
 
 
 def remove_obj(name):

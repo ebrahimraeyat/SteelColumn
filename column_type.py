@@ -115,14 +115,6 @@ class ColumnType:
                 )
         obj.setEditorMode("childrens_name", 1)
 
-        if not hasattr(obj, "front_draw_sources_name"):
-            obj.addProperty(
-                "App::PropertyStringList",
-                "front_draw_sources_name",
-                "views",
-                )
-        obj.setEditorMode("front_draw_sources_name", 1)
-
         if not hasattr(obj, "right_draw_childrens_name"):
             obj.addProperty(
                 "App::PropertyStringList",
@@ -314,7 +306,7 @@ class ColumnType:
         souble_ipe_levels = [simplify_levels[0]]
 
         for i, name in enumerate(simplify_sections_name):
-            n, _, flang_plate, web_plate = decompose_section_name(name)
+            n, _, flang_plate, web_plate, _ = decompose_section_name(name)
             if flang_plate or (i == len(simplify_sections_name) - 1):
                 extend_button_flang_length = obj.extend_plate_len_above * scale
             else:
@@ -380,24 +372,10 @@ class ColumnType:
         IPE.ViewObject.ShapeColor = RED
         obj.Shape = IPE.Shape
 
-        front_draw_sources_name = []
-
-        line = FreeCAD.ActiveDocument.addObject("Part::FeaturePython", "line")
-        line.Shape = Part.makeCompound(edges)
-        ipe_draw = FreeCAD.ActiveDocument.addObject('Part::Extrusion','ipe_draw')
-        ipe_draw.Base = line
-        ipe_draw.Dir = FreeCAD.Vector(0, 0, 1)
-        ipe_draw.LengthFwd = h
-        ipe_draw.Placement.Base = IPE.Placement.Base
-        ipe_draw.ViewObject.ShapeColor = RED
-        front_draw_sources_name.append(ipe_draw.Name)
-
-
         # souble ipe creation
         souble_ipes_name = []
         if obj.pa_baz:
             souble_ipe_section = ipe.copy()
-            souble_ipe_edge = edge.copy()
             for i, n in enumerate(souble_ipes):
                 if n == 3:
                     souble_ipe_section.Placement.Base = FreeCAD.Vector(0, 0, souble_ipe_levels[i]) + obj.Placement.Base
@@ -409,16 +387,6 @@ class ColumnType:
                     souble_ipe_obj.Height = h
                     souble_ipe_obj.ViewObject.ShapeColor = (.80, 0.0, 0.0)
                     souble_ipes_name.append(souble_ipe_obj.Name)
-
-                    souble_ipe_edge.Placement.Base = FreeCAD.Vector(0, 0, souble_ipe_levels[i]) + obj.Placement.Base
-                    line = FreeCAD.ActiveDocument.addObject("Part::FeaturePython", "line")
-                    line.Shape = souble_ipe_edge
-                    souble_ipe_draw = FreeCAD.ActiveDocument.addObject('Part::Extrusion','ipe_draw')
-                    souble_ipe_draw.Base = line
-                    souble_ipe_draw.Dir = FreeCAD.Vector(0, 0, 1)
-                    souble_ipe_draw.LengthFwd = h
-                    souble_ipe_draw.ViewObject.ShapeColor = (.80, 0.0, 0.0)
-                    front_draw_sources_name.append(souble_ipe_draw.Name)
 
         flang_plates_name = []
         connection_ipes = []
@@ -446,17 +414,6 @@ class ColumnType:
                 PLATE.Height = h
                 PLATE.ViewObject.ShapeColor = BLUE
                 flang_plates_name.append(PLATE.Name)
-
-                plb_edge = edge.copy()
-                plb_edge.Placement.Base = FreeCAD.Vector(0, -y, merge_flang_levels[i]) + obj.Placement.Base
-                line = FreeCAD.ActiveDocument.addObject("Part::FeaturePython", "line")
-                line.Shape = plb_edge
-                plb_draw = FreeCAD.ActiveDocument.addObject('Part::Extrusion','plate_draw')
-                plb_draw.Base = line
-                plb_draw.Dir = FreeCAD.Vector(0, 0, 1)
-                plb_draw.LengthFwd = h
-                plb_draw.ViewObject.ShapeColor = BLUE
-                front_draw_sources_name.append(plb_draw.Name)
 
         nardebani_names = []
         if obj.pa_baz:
@@ -544,7 +501,7 @@ class ColumnType:
         for i in range(len(obj.heights)):
             level = (levels[i] + obj.heights[i] / 2) * scale
             index = obj.level_obj.levels.index(levels[i])
-            section = make_section(obj.sections_name[index], pa_baz=obj.pa_baz, level=level, scale=obj.v_scale)
+            section = make_section(obj.sections_name[index], level=level, scale=obj.v_scale)
             section.Placement.Base = obj.Placement.Base
             section.Placement.Base.x += 500
             sections_obj_name.append(section.Name)
@@ -584,11 +541,10 @@ class ColumnType:
         obj.souble_ipes_name = souble_ipes_name
         obj.nardebani_names = nardebani_names
         obj.sections_obj_name = sections_obj_name
-        obj.front_draw_sources_name = front_draw_sources_name
 
         childrens_name = [IPE.Name] + flang_plates_name + web_plates_name + nardebani_names + \
                         [base_plate.Name] + connection_ipes + neshimans_name + \
-                        souble_ipes_name + sections_obj_name + front_draw_sources_name
+                        souble_ipes_name + sections_obj_name
         old_childrens_name = obj.childrens_name
         obj.childrens_name = childrens_name
         for name in old_childrens_name:
@@ -859,7 +815,6 @@ class Ui:
         size = col_obj.size
         index = self.form.ipe_size.findText(size)
         N = col_obj.N
-        pa_baz = col_obj.pa_baz
         extend_length = col_obj.extend_length
         extend_plate_len_above = col_obj.extend_plate_len_above
         extend_plate_len_below = col_obj.extend_plate_len_below
@@ -871,7 +826,6 @@ class Ui:
         self.form.extend_plate_len_below.setValue(float(extend_plate_len_below))
         self.form.connection_ipe_length.setValue(float(connection_ipe_length))
         self.form.connection_ipe_above.setValue(float(connection_ipe_above))
-        self.form.pa_baz.setChecked(pa_baz)
         self.form.number.setValue(int(N))
 
 
@@ -931,8 +885,9 @@ class Ui:
         extend_plate_len_below = self.form.extend_plate_len_below.value()
         connection_ipe_length = self.form.connection_ipe_length.value()
         connection_ipes_above_length = self.form.connection_ipe_above.value()
+        firs_section = sections_name[0]
+        pa_baz = firs_section.endswith("CC")
         pos = (x, 0)
-        pa_baz = self.form.pa_baz.isChecked()
         N = self.form.number.value()
         if bool(self.col_obj):
             self.col_obj.levels_state = levels_state

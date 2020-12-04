@@ -137,6 +137,8 @@ class Section:
             plwl.Placement.Base.x = -x
             shapes.extend([plwr, plwl])
             name += f"WPL{width}X{height}"
+        if obj.pa_baz:
+            name += "CC"
 
         Components = Part.makeCompound(shapes)
         obj.Shape = Components
@@ -261,8 +263,8 @@ def make_section_gui(n, size, flang_plate_size, web_plate_size, pa_baz):
     return obj
 
 
-def make_section(name, pa_baz=False, level=0, scale=.25, obj=None):
-    n, size, flang_plate_size, web_plate_size = decompose_section_name(name)
+def make_section(name, level=0, scale=.25, obj=None):
+    n, size, flang_plate_size, web_plate_size, pa_baz = decompose_section_name(name)
     if not obj:
         obj = FreeCAD.ActiveDocument.addObject("Part::Part2DObjectPython", "section")
         Section(obj)
@@ -305,12 +307,13 @@ class Ui:
         self.form.tf.valueChanged.connect(self.reset_section_obj)
         self.form.bw.valueChanged.connect(self.reset_section_obj)
         self.form.tw.valueChanged.connect(self.reset_section_obj)
-        self.form.pa_baz.stateChanged.connect(self.reset_section_obj)
         self.form.flang_plate.toggled.connect(self.reset_section_obj)
         self.form.web_plate.toggled.connect(self.reset_section_obj)
+        self.form.pa_baz.stateChanged.connect(self.reset_section_obj)
         self.form.add_button.clicked.connect(self.add_section)
         self.form.remove_button.clicked.connect(self.remove_section)
         self.form.section_list.itemClicked.connect(self.itemClicked)
+
 
     def itemClicked(self, item):
         name = item.text()

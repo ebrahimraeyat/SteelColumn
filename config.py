@@ -9,7 +9,6 @@ def save(widget, json_file):
 	d['connection_ipe_length'] = widget.connection_ipe_length.value()
 	d['connection_ipe_above'] = widget.connection_ipe_above.value()
 	d['deltax'] = widget.deltax.value()
-	d['pa_baz'] = widget.pa_baz.isChecked()
 	d['number'] = widget.number.value()
 
 
@@ -28,6 +27,5 @@ def load(widget, json_file):
 	widget.connection_ipe_length.setValue(d['connection_ipe_length'])
 	widget.connection_ipe_above.setValue(d['connection_ipe_above'])
 	widget.deltax.setValue(d['deltax'])
-	widget.pa_baz.setChecked(d['pa_baz'])
 	widget.number.setValue(d.get('number', 1))
 
