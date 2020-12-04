@@ -117,8 +117,11 @@ def connection_ipe_under_plate(ct):
 				break
 	return ipes_name_under_plate
 
-def add_connection_ipe_under_plate(ct, dxfattribs, block, z, scale):
-	ipes_name_under_plate = connection_ipe_under_plate(ct)
+def add_connection_ipe_under_plate(ct, dxfattribs, block, z, scale, View):
+	if View == "Web":
+		ipes_name_under_plate = ct.connection_ipes_name
+	else:
+		ipes_name_under_plate = connection_ipe_under_plate(ct)
 	if ipes_name_under_plate:
 		for name in ipes_name_under_plate:
 			obj = FreeCAD.ActiveDocument.getObject(name)
@@ -127,6 +130,8 @@ def add_connection_ipe_under_plate(ct, dxfattribs, block, z, scale):
 			y = bb.ZMin * scale + z
 			w  = bb.XLength * scale
 			h = bb.ZLength * scale
+			if View == "Web":
+				w = bb.YLength * scale
 			dxfattribs['xscale'] = w
 			dxfattribs['yscale'] = h
 			block.add_blockref("plate", (x, y), dxfattribs=dxfattribs)
@@ -257,6 +262,9 @@ def get_view_direction(View):
 		return (1, -1 , 0.2)
 
 def export_to_dxf(filename, show_hidden_edges=False, View="Flange"):
+	'''
+	View can be "Flange", "Web" or "3D"
+	'''
 
 	view_scale = 1
 	page = FreeCAD.ActiveDocument.addObject('TechDraw::DrawPage', 'Page')
@@ -319,7 +327,8 @@ def export_to_dxf(filename, show_hidden_edges=False, View="Flange"):
 				{'layer':"COL", "linetype":"DASHED2", "lineweight": 13},
 				block,
 				0,
-				view.Scale
+				view.Scale,
+				View,
 				)
 
 		es = Part.Compound(visible_edges + hidden_edges)
