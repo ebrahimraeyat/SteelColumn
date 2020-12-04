@@ -102,6 +102,35 @@ def add_section_edges_to_dxf(ct, dxfattribs, block, z, scale):
 			del(dxfattribs['xscale'])
 			del(dxfattribs['yscale'])
 
+def connection_ipe_under_plate(ct):
+	ipes_name_under_plate = []
+	for ipe_name in ct.connection_ipes_name:
+		connection_ipe_obj = FreeCAD.ActiveDocument.getObject(ipe_name)
+		zmin_ipe = connection_ipe_obj.Shape.BoundBox.ZMin
+		zmax_ipe = connection_ipe_obj.Shape.BoundBox.ZMax
+		for flang_plate_name in ct.flang_plates_name:
+			plate_obj = FreeCAD.ActiveDocument.getObject(flang_plate_name)
+			zmin_pl = plate_obj.Shape.BoundBox.ZMin
+			zmax_pl = plate_obj.Shape.BoundBox.ZMax
+			if (zmin_pl <= zmin_ipe) and (zmax_pl >= zmax_ipe):
+				ipes_name_under_plate.append(ipe_name)
+				break
+	return ipes_name_under_plate
+
+def add_connection_ipe_under_plate(ct, dxfattribs, block, z, scale):
+	ipes_name_under_plate = connection_ipe_under_plate(ct)
+	if ipes_name_under_plate:
+		for name in ipes_name_under_plate:
+			obj = FreeCAD.ActiveDocument.getObject(name)
+			bb = obj.Shape.BoundBox
+			x = bb.Center.x * scale
+			y = bb.ZMin * scale + z
+			w  = bb.XLength * scale
+			h = bb.ZLength * scale
+			dxfattribs['xscale'] = w
+			dxfattribs['yscale'] = h
+			block.add_blockref("plate", (x, y), dxfattribs=dxfattribs)
+
 
 def add_leader_for_connection_ipe(name, dxfattribs, block, view_scale, obj_scale):
 	o = FreeCAD.ActiveDocument.getObject(name)
@@ -282,6 +311,16 @@ def export_to_dxf(filename, show_hidden_edges=False, View="Flange"):
 			e = hidden_edges[0]
 			comp = e.generalFuse(hidden_edges[1:])
 			hidden_edges = comp[0].Edges
+
+		# adding ipe connection when show_hidden_edges is False
+		if not show_hidden_edges:
+			add_connection_ipe_under_plate(
+				ct,
+				{'layer':"COL", "linetype":"DASHED2", "lineweight": 13},
+				block,
+				0,
+				view.Scale
+				)
 
 		es = Part.Compound(visible_edges + hidden_edges)
 		ymin_view = es.BoundBox.YMin
