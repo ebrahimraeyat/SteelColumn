@@ -115,14 +115,6 @@ class ColumnType:
                 )
         obj.setEditorMode("childrens_name", 1)
 
-        if not hasattr(obj, "right_draw_childrens_name"):
-            obj.addProperty(
-                "App::PropertyStringList",
-                "right_draw_childrens_name",
-                "views",
-                )
-        obj.setEditorMode("right_draw_childrens_name", 1)
-
         if not hasattr(obj, "sections_name"):
             obj.addProperty(
                 "App::PropertyStringList",
