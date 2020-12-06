@@ -4,6 +4,7 @@ def save(widget, json_file):
 	d = {}
 	d['ipe_size'] = widget.ipe_size.currentText()
 	d['extend_length'] = widget.extend_length.value()
+	d['extend_3ipe_len_below'] = widget.extend_3ipe_len_below.value()
 	d['extend_plate_len_above'] = widget.extend_plate_len_above.value()
 	d['extend_plate_len_below'] = widget.extend_plate_len_below.value()
 	d['connection_ipe_length'] = widget.connection_ipe_length.value()
@@ -22,6 +23,7 @@ def load(widget, json_file):
 	index = widget.ipe_size.findText(d['ipe_size'])
 	widget.ipe_size.setCurrentIndex(index)
 	widget.extend_length.setValue(d['extend_length'])
+	widget.extend_3ipe_len_below.setValue(d.get('extend_3ipe_len_below', .8))
 	widget.extend_plate_len_above.setValue(d.get('extend_plate_len_above', .8))
 	widget.extend_plate_len_below.setValue(d.get('extend_plate_len_below', .8))
 	widget.connection_ipe_length.setValue(d['connection_ipe_length'])

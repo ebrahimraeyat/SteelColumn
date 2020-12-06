@@ -129,6 +129,13 @@ class ColumnType:
                 "extend_lengths",
                 )
 
+        if not hasattr(obj, "extend_3ipe_len_below"):
+            obj.addProperty(
+                "App::PropertyFloat",
+                "extend_3ipe_len_below",
+                "extend_lengths",
+                )
+
         if not hasattr(obj, "extend_plate_len_above"):
             obj.addProperty(
                 "App::PropertyFloat",
@@ -336,7 +343,7 @@ class ColumnType:
                 if n == 3 or (i == len(simplify_sections_name) - 1):
                     extend_button_ipe_length = obj.extend_length * scale
                 else:
-                    extend_button_ipe_length = -obj.extend_length * scale
+                    extend_button_ipe_length = -obj.extend_3ipe_len_below * scale
 
                 level = simplify_levels[i + 1] + extend_button_ipe_length
                 if souble_ipes:
@@ -628,6 +635,7 @@ def make_column_type(
         size=16,
         pa_baz=False,
         extend_length=.8,
+        extend_3ipe_len_below=.8,
         extend_plate_len_above=.8,
         extend_plate_len_below=.8,
         connection_ipe_lengths=[1., .5],
@@ -644,6 +652,7 @@ def make_column_type(
     obj.Label = f"C{n + 1}"
     obj.sections_name = sections_name
     obj.extend_length = extend_length
+    obj.extend_3ipe_len_below = extend_3ipe_len_below
     obj.extend_plate_len_above = extend_plate_len_above
     obj.extend_plate_len_below = extend_plate_len_below
     position = FreeCAD.Vector(pos[0], pos[1], 0)
@@ -808,12 +817,14 @@ class Ui:
         index = self.form.ipe_size.findText(size)
         N = col_obj.N
         extend_length = col_obj.extend_length
+        extend_3ipe_len_below = col_obj.extend_3ipe_len_below
         extend_plate_len_above = col_obj.extend_plate_len_above
         extend_plate_len_below = col_obj.extend_plate_len_below
         connection_ipe_length = col_obj.connection_ipe_lengths[0]
         connection_ipe_above = col_obj.connection_ipe_lengths[1]
         self.form.ipe_size.setCurrentIndex(index)
         self.form.extend_length.setValue(float(extend_length))
+        self.form.extend_3ipe_len_below.setValue(float(extend_3ipe_len_below))
         self.form.extend_plate_len_above.setValue(float(extend_plate_len_above))
         self.form.extend_plate_len_below.setValue(float(extend_plate_len_below))
         self.form.connection_ipe_length.setValue(float(connection_ipe_length))
@@ -873,6 +884,7 @@ class Ui:
         else:
             x = self.col_obj.Placement.Base.x
         extend_length = self.form.extend_length.value()
+        extend_3ipe_len_below = self.form.extend_3ipe_len_below.value()
         extend_plate_len_above = self.form.extend_plate_len_above.value()
         extend_plate_len_below = self.form.extend_plate_len_below.value()
         connection_ipe_length = self.form.connection_ipe_length.value()
@@ -886,6 +898,7 @@ class Ui:
             self.col_obj.sections_name = sections_name
             self.col_obj.size = str(ipe_size)
             self.col_obj.extend_length = extend_length
+            self.col_obj.extend_3ipe_len_below = extend_3ipe_len_below
             self.col_obj.pa_baz = pa_baz
             self.col_obj.connection_ipe_lengths = [connection_ipe_length, connection_ipes_above_length]
             self.col_obj.extend_plate_len_above = extend_plate_len_above
@@ -902,6 +915,7 @@ class Ui:
             self.level_obj,
             size=ipe_size,
             extend_length=extend_length,
+            extend_3ipe_len_below = extend_3ipe_len_below,
             pos=pos,
             pa_baz=pa_baz,
             connection_ipe_lengths=[connection_ipe_length, connection_ipes_above_length],
