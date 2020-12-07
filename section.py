@@ -201,7 +201,7 @@ def create_plate(width, height):
     p4 = Vector(-width/2,height/2,0)
     p = Part.makePolygon([p1,p2,p3,p4,p1])
     p = Part.Face(p)
-    edge = Part.makeLine(p4, p3)
+    edge = Part.makeLine(p1, p2)
     return p, edge
 
         # for i, section in enumerate(obj.sections):

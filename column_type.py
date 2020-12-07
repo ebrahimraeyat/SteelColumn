@@ -115,6 +115,14 @@ class ColumnType:
                 )
         obj.setEditorMode("childrens_name", 1)
 
+        if not hasattr(obj, "front_draw_sources_name"):
+            obj.addProperty(
+                "App::PropertyStringList",
+                "front_draw_sources_name",
+                "views",
+                )
+        obj.setEditorMode("front_draw_sources_name", 2)
+
         if not hasattr(obj, "sections_name"):
             obj.addProperty(
                 "App::PropertyStringList",
@@ -395,7 +403,8 @@ class ColumnType:
             neshiman_base_z = 0
         else:
             neshiman_base_z = 100 * obj.v_scale * 2
-        
+
+        front_draw_sources_name = []
         for i, plate in enumerate(merge_flang_plates):
             if plate:
                 width = plate[0]
@@ -414,16 +423,30 @@ class ColumnType:
                 PLATE.ViewObject.ShapeColor = BLUE
                 flang_plates_name.append(PLATE.Name)
 
+                plb_edge = edge.copy()
+                plb_edge.Placement.Base = FreeCAD.Vector(0, -y, merge_flang_levels[i]) + obj.Placement.Base
+                line = FreeCAD.ActiveDocument.addObject("Part::FeaturePython", "line")
+                line.Shape = plb_edge
+                plb_draw = FreeCAD.ActiveDocument.addObject('Part::Extrusion','plate_draw')
+                plb_draw.Base = line
+                plb_draw.Dir = FreeCAD.Vector(0, 0, 1)
+                plb_draw.LengthFwd = h
+                plb_draw.ViewObject.ShapeColor = BLUE
+                front_draw_sources_name.append(plb_draw.Name)
+
         nardebani_names = []
         if obj.pa_baz:
             empty_levels = find_empty_levels(souble_ipes_name, levels, scale)
             if empty_levels:
                 connection_ipe_section = ipe.copy()
+                connection_ipe_edge = edges[0].copy()
                 for lev in empty_levels:
                     connection_ipe_section.Placement.Base = IPE.Placement.Base
+                    connection_ipe_edge.Placement.Base = IPE.Placement.Base
                     if lev != simplify_levels[0]:
                         below_len = obj.connection_ipe_lengths[0] - obj.connection_ipe_lengths[1]
                         connection_ipe_section.Placement.Base.z = lev - below_len * scale
+                        connection_ipe_edge.Placement.Base.z = lev - below_len * scale
 
 
                     connection_ipe_section_obj = FreeCAD.ActiveDocument.addObject("Part::FeaturePython", "ipe")
@@ -433,6 +456,15 @@ class ColumnType:
                     connection_ipe_obj.Height = obj.connection_ipe_lengths[0] * scale
                     connection_ipe_obj.ViewObject.ShapeColor = (.80, 0.0, 0.0)
                     connection_ipes.append(connection_ipe_obj.Name)
+
+                    line = FreeCAD.ActiveDocument.addObject("Part::FeaturePython", "line")
+                    line.Shape = connection_ipe_edge
+                    connection_ipe_draw = FreeCAD.ActiveDocument.addObject('Part::Extrusion','connection_ipe_draw')
+                    connection_ipe_draw.Base = line
+                    connection_ipe_draw.Dir = FreeCAD.Vector(0, 0, 1)
+                    connection_ipe_draw.LengthFwd = obj.connection_ipe_lengths[0] * scale
+                    plb_draw.ViewObject.ShapeColor = RED
+                    front_draw_sources_name.append(connection_ipe_draw.Name)
 
 
         # draw plate for pa_baz column (nardebani)
@@ -540,10 +572,11 @@ class ColumnType:
         obj.souble_ipes_name = souble_ipes_name
         obj.nardebani_names = nardebani_names
         obj.sections_obj_name = sections_obj_name
+        obj.front_draw_sources_name = front_draw_sources_name
 
         childrens_name = [IPE.Name] + flang_plates_name + web_plates_name + nardebani_names + \
                         [base_plate.Name] + connection_ipes + neshimans_name + \
-                        souble_ipes_name + sections_obj_name
+                        souble_ipes_name + sections_obj_name + front_draw_sources_name
         old_childrens_name = obj.childrens_name
         obj.childrens_name = childrens_name
         for name in old_childrens_name:
