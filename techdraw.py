@@ -97,10 +97,12 @@ def add_section_edges_to_dxf(ct, dxfattribs, block, z, scale):
 			bt *= scale
 			dxfattribs['xscale'] = bw
 			dxfattribs['yscale'] = bt
+			dxfattribs['ltscale'] = 0.3
 			block.add_blockref("plate", (x, y), dxfattribs=dxfattribs)
 			block.add_blockref("plate", (x, y - bb.ZLength * scale - bt), dxfattribs=dxfattribs)
 			del(dxfattribs['xscale'])
 			del(dxfattribs['yscale'])
+			del(dxfattribs['ltscale'])
 
 def add_connection_ipe_under_plate(ct, dxfattribs, block, x, y, scale, View, page):
 	view = FreeCAD.ActiveDocument.addObject('TechDraw::DrawViewPart','View')
@@ -336,7 +338,7 @@ def export_to_dxf(filename, show_hidden_edges=False, View="Flange"):
 		if not show_hidden_edges:
 			add_connection_ipe_under_plate(
 				ct,
-				{'layer':"COL", "linetype":"DASHED2", "lineweight": 13},
+				{'layer':"COL", "linetype":"DASHED2", "lineweight": 13, "ltscale": .3},
 				block,
 				x,
 				y,
