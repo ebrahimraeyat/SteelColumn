@@ -4,14 +4,10 @@ import FreeCAD
 import FreeCADGui
 import DraftTools
 import os
-import techdraw
 import column_types
 import column_type
 import section
 import update
-
-
-# from safe.punch import punchPanel
 
 
 def QT_TRANSLATE_NOOP(ctx, txt): return txt
@@ -22,6 +18,7 @@ class Dxf:
         filename = get_save_filename('.dxf')
         if not filename:
             return
+        import techdraw
         techdraw.export_to_dxf(filename)
 
     def IsActive(self):
