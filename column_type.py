@@ -463,7 +463,6 @@ class ColumnType:
                     connection_ipe_draw.Base = line
                     connection_ipe_draw.Dir = FreeCAD.Vector(0, 0, 1)
                     connection_ipe_draw.LengthFwd = obj.connection_ipe_lengths[0] * scale
-                    plb_draw.ViewObject.ShapeColor = RED
                     front_draw_sources_name.append(connection_ipe_draw.Name)
 
 
