@@ -28,7 +28,10 @@ def decompose_section_name(name):
     else:
         flang_plate_dim = []
     if wi != -1:
-        web_plate = name[wi:]
+        if cc != -1:
+            web_plate = name[wi:cc]
+        else:
+            web_plate = name[wi:]
         web_plate = web_plate.lstrip("WPL")
         web_plate = web_plate.split("X")
         web_plate_dim = [int(i) for i in web_plate]

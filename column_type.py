@@ -923,6 +923,8 @@ class Ui:
         connection_ipes_above_length = self.form.connection_ipe_above.value()
         firs_section = sections_name[0]
         pa_baz = firs_section.endswith("CC")
+        if firs_section.startswith("3"):
+            pa_baz = True
         pos = (x, 0)
         N = self.form.number.value()
         if bool(self.col_obj):
