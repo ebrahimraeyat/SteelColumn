@@ -75,10 +75,18 @@ def add_section_edges_to_dxf(ct, dxfattribs, block, z, scale):
 						)
 
 		if o.web_plate_size:
+			for web_plate_name in ct.web_plates_name:
+				web_plate = FreeCAD.ActiveDocument.getObject(web_plate_name)
+				web_plate_bb = web_plate.Shape.BoundBox
+				zmax, zmin = web_plate_bb.ZMax, web_plate_bb.ZMin
+				web_plate_height = web_plate.Height
+				if zmin < o_zmin < zmax:
+					h = round(int(web_plate_height.Value / ct.v_scale), -1)
+					break
 			bf, tf = o.web_plate_size
 			y = (bb.ZMax + bb.ZMin) / 2 * scale + z
 			x = bb.XMax * scale
-			block.add_text(f"2PL{bf}*{tf}",
+			block.add_text(f"2PL{h}*{bf}*{tf}",
 				dxfattribs=dxfattribs_text).set_pos(
 				(x, y),
 				align="MIDDLE_LEFT")
