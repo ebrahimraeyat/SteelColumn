@@ -290,7 +290,7 @@ def make_section_gui(
 
 
 def make_section(name, level=0, scale=.25, obj=None):
-    n, size, flang_plate_size, web_plate_size, pa_baz = decompose_section_name(name)
+    n, size, flang_plate_size, web_plate_size, side_plate_size, pa_baz = decompose_section_name(name)
     if not obj:
         obj = FreeCAD.ActiveDocument.addObject("Part::Part2DObjectPython", "section")
         Section(obj)
@@ -300,6 +300,7 @@ def make_section(name, level=0, scale=.25, obj=None):
     obj.size = size
     obj.flang_plate_size = flang_plate_size
     obj.web_plate_size = web_plate_size
+    obj.side_plate_size = side_plate_size
     obj.pa_baz = pa_baz
     obj.level = level
     obj.scale = scale
@@ -333,8 +334,11 @@ class Ui:
         self.form.tf.valueChanged.connect(self.reset_section_obj)
         self.form.bw.valueChanged.connect(self.reset_section_obj)
         self.form.tw.valueChanged.connect(self.reset_section_obj)
+        self.form.bs.valueChanged.connect(self.reset_section_obj)
+        self.form.ts.valueChanged.connect(self.reset_section_obj)
         self.form.flang_plate.toggled.connect(self.reset_section_obj)
         self.form.web_plate.toggled.connect(self.reset_section_obj)
+        self.form.side_plate.toggled.connect(self.reset_section_obj)
         self.form.pa_baz.stateChanged.connect(self.reset_section_obj)
         self.form.add_button.clicked.connect(self.add_section)
         self.form.remove_button.clicked.connect(self.remove_section)
@@ -350,7 +354,7 @@ class Ui:
 
 
     def reset_section_obj(self):
-        n, size, pa_baz, bf, tf, bw, tw, flang_plate, web_plate = self.current_form_values()
+        n, size, pa_baz, bf, tf, bw, tw, bs, ts, flang_plate, web_plate, side_plate = self.current_form_values()
         obj = self.section_obj
         obj.n = n
         obj.size = size
@@ -364,6 +368,10 @@ class Ui:
             obj.web_plate_size = [bw, tw]
         else:
             obj.web_plate_size = []
+        if side_plate:
+            obj.side_plate_size = [bs, ts]
+        else:
+            obj.side_plate_size = []
         FreeCAD.ActiveDocument.recompute()
         FreeCADGui.SendMsgToActiveView("ViewFit")
 
@@ -386,10 +394,13 @@ class Ui:
         tf = self.form.tf.value()
         bw = self.form.bw.value() * 10
         tw = self.form.tw.value()
+        bs = self.form.bs.value() * 10
+        ts = self.form.ts.value()
         flang_plate = self.form.flang_plate.isChecked()
         web_plate = self.form.web_plate.isChecked()
+        side_plate = self.form.side_plate.isChecked()
 
-        return n, size, pa_baz, bf, tf, bw, tw, flang_plate, web_plate
+        return n, size, pa_baz, bf, tf, bw, tw, bs, ts, flang_plate, web_plate, side_plate
 
     def save_config(self):
         sections_name = self.level_obj.sections_name
@@ -406,7 +417,7 @@ class Ui:
         sections_name = [self.form.section_list.item(i).text() for i in range(self.form.section_list.count())]
         FreeCAD.ActiveDocument.Levels.sections_name = sections_name
         self.save_config()
-        FreeCADGui.Control.closeDialog(self)
+        FreeCADGui.Control.closeDialog()
 
 
     def reject(self):

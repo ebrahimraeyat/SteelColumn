@@ -313,7 +313,7 @@ class ColumnType:
         souble_ipe_levels = [simplify_levels[0]]
 
         for i, name in enumerate(simplify_sections_name):
-            n, _, flang_plate, web_plate, _ = decompose_section_name(name)
+            n, _, flang_plate, web_plate, side_plate, _ = decompose_section_name(name)
             if flang_plate or (i == len(simplify_sections_name) - 1):
                 extend_button_flang_length = obj.extend_plate_len_above * scale
             else:

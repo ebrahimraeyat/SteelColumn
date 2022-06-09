@@ -13,35 +13,35 @@ def decompose_section_name(name):
     size = int(name[4:6])
     fi = name.find("FPL")
     wi = name.find("WPL")
+    si = name.find("SPL")
     cc = name.find("CC")
-    if fi != -1:
-        if wi == -1:
-            if cc != -1:
-                flang_plate = name[fi:cc]
-            else:
-                flang_plate = name[fi:]
-        else:
-            flang_plate = name[fi: wi]
-        flang_plate = flang_plate.lstrip("FPL")
-        flang_plate = flang_plate.split("X")
-        flang_plate_dim = [int(i) for i in flang_plate]
-    else:
-        flang_plate_dim = []
-    if wi != -1:
-        if cc != -1:
-            web_plate = name[wi:cc]
-        else:
-            web_plate = name[wi:]
-        web_plate = web_plate.lstrip("WPL")
-        web_plate = web_plate.split("X")
-        web_plate_dim = [int(i) for i in web_plate]
-    else:
-        web_plate_dim = []
     if cc == -1:
         pa_baz = False
     else:
         pa_baz = True
-    return(n, size, flang_plate_dim, web_plate_dim, pa_baz)
+        name = name[:cc]
+    if si == -1:
+        side_plate = []
+    else:
+        side_plate = get_width_height_from_name(name[si:], 'SPL')
+        name = name[:si]
+    if wi == -1:
+        web_plate = []
+    else:
+        web_plate = get_width_height_from_name(name[wi:], 'WPL')
+        name = name[:wi]
+    if fi == -1:
+        flang_plate = []
+    else:
+        flang_plate = get_width_height_from_name(name[fi:], 'FPL')
+
+    return(n, size, flang_plate, web_plate, side_plate, pa_baz)
+
+def get_width_height_from_name(
+        name: str = 'FPL200X10',
+        lstrip: str = 'FPL',
+        ):
+    return [int(i) for i in name.lstrip(lstrip).split('X')]
 
 
 def remove_obj(name):
