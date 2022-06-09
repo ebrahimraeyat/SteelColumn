@@ -15,10 +15,10 @@ import section_config as config
 
 class Section:
     def __init__(self, obj):
-        obj.Proxy = self
         self.set_properties(obj)
 
     def set_properties(self, obj):
+        obj.Proxy = self
         self.Type = "Section"
         
         if not hasattr(obj, "n"):
@@ -46,6 +46,12 @@ class Section:
             obj.addProperty(
                 "App::PropertyIntegerList",
                 "web_plate_size",
+                "section",
+            )
+        if not hasattr(obj, "side_plate_size"):
+            obj.addProperty(
+                "App::PropertyIntegerList",
+                "side_plate_size",
                 "section",
             )
 
@@ -97,7 +103,6 @@ class Section:
             dist = bf
         else:
             dist = 0
-        doc = FreeCAD.ActiveDocument
         ipe, _ = create_ipe(bf, d, tw, tf)
         deltax = bf + dist
 
@@ -137,6 +142,18 @@ class Section:
             plwl.Placement.Base.x = -x
             shapes.extend([plwr, plwl])
             name += f"WPL{width}X{height}"
+        if obj.side_plate_size:
+            width = obj.side_plate_size[0]
+            height = obj.side_plate_size[1]
+            x = ipe.Placement.Base.x + (bf + height) / 2
+
+            plsr, _ = create_plate(height, width)
+            plsr.Placement.Base.x = x
+
+            plsl = plsr.copy()
+            plsl.Placement.Base.x = -x
+            shapes.extend([plsr, plsl])
+            name += f"SPL{width}X{height}"
         if obj.pa_baz:
             name += "CC"
 
@@ -243,10 +260,18 @@ class ViewProviderSection:
         FreeCAD.Console.PrintMessage("Change View property: " + str(prop) + "\n")
 
 
-def make_section_gui(n, size, flang_plate_size, web_plate_size, pa_baz):
+def make_section_gui(
+        n,
+        size,
+        flang_plate_size,
+        web_plate_size,
+        pa_baz,
+        side_plate_size=[],
+        ):
     obj = FreeCAD.ActiveDocument.addObject("Part::Part2DObjectPython", "section")
     Section(obj)
-    ViewProviderSection(obj.ViewObject)
+    if FreeCAD.GuiUp:
+        ViewProviderSection(obj.ViewObject)
     name = f"{n}IPE{size}"
     if flang_plate_size:
         bf, tf = flang_plate_size
@@ -259,6 +284,7 @@ def make_section_gui(n, size, flang_plate_size, web_plate_size, pa_baz):
     obj.size = size
     obj.flang_plate_size = flang_plate_size
     obj.web_plate_size = web_plate_size
+    obj.side_plate_size = side_plate_size
     obj.pa_baz = pa_baz
     return obj
 
@@ -401,6 +427,13 @@ def create_sections():
 
 
 if __name__ == '__main__':
-    create_sections()
+    make_section_gui(
+        n=2,
+        size=16,
+        flang_plate_size=[200, 20],
+        web_plate_size=[100, 10],
+        pa_baz=True,
+        side_plate_size=[250, 10],
+        )
     
 
