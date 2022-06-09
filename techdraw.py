@@ -3,7 +3,7 @@ import copy
 import string
 import random
 
-import TechDraw
+# import TechDraw
 import FreeCADGui as Gui
 import FreeCAD
 import Part
@@ -45,8 +45,8 @@ def add_section_edges_to_dxf(ct, dxfattribs, block, z, scale):
 						(x, y),
 						align="TOP_CENTER"
 						)
+		o_zmin = bb.ZMin
 		if o.flang_plate_size:
-			o_zmin = bb.ZMin
 			for flang_plate_name in ct.flang_plates_name:
 				flang_plate = FreeCAD.ActiveDocument.getObject(flang_plate_name)
 				flang_plate_bb = flang_plate.Shape.BoundBox
@@ -84,6 +84,23 @@ def add_section_edges_to_dxf(ct, dxfattribs, block, z, scale):
 					h = round(int(web_plate_height.Value / ct.v_scale), -1)
 					break
 			bf, tf = o.web_plate_size
+			y = (bb.ZMax + bb.ZMin) / 2 * scale + z
+			x = bb.XMax * scale
+			block.add_text(f"2PL{h}*{bf}*{tf}",
+				dxfattribs=dxfattribs_text).set_pos(
+				(x, y),
+				align="MIDDLE_LEFT")
+		
+		if o.side_plate_size:
+			for side_plate_name in ct.side_plates_name:
+				side_plate = FreeCAD.ActiveDocument.getObject(side_plate_name)
+				side_plate_bb = side_plate.Shape.BoundBox
+				zmax, zmin = side_plate_bb.ZMax, side_plate_bb.ZMin
+				side_plate_height = side_plate.Height
+				if zmin < o_zmin < zmax:
+					h = round(int(side_plate_height.Value / ct.v_scale), -1)
+					break
+			bf, tf = o.side_plate_size
 			y = (bb.ZMax + bb.ZMin) / 2 * scale + z
 			x = bb.XMax * scale
 			block.add_text(f"2PL{h}*{bf}*{tf}",
@@ -282,6 +299,7 @@ def export_to_dxf(filename, show_hidden_edges=False, View="Flange"):
 		names = [ct.ipe_name] + \
 				ct.flang_plates_name + \
 				(ct.web_plates_name if View != "Flange" else []) + \
+				ct.side_plates_name + \
 				ct.base_plate_name + \
 				ct.nardebani_names + \
 				ct.connection_ipes_name + \
@@ -379,6 +397,11 @@ def export_to_dxf(filename, show_hidden_edges=False, View="Flange"):
 	FreeCAD.ActiveDocument.removeObject(page.Name)
 
 if __name__ == '__main__':
-	export_to_dxf("/home/ebi/alaki/ezdxf.dxf")
+	import tempfile
+	from pathlib import Path
+	temp_dir = tempfile.gettempdir()
+	# export_to_dxf(str(Path(temp_dir) / 'ezdxf.dxf'))
+	# export_to_dxf(str(Path(temp_dir) / 'ezdxf_web.dxf'), View='Web')
+	export_to_dxf(str(Path(temp_dir) / 'ezdxf_web_show_hidden.dxf'), show_hidden_edges=True, View='Web')
 
 
