@@ -201,7 +201,13 @@ class ColumnType:
                 "web_plates_name",
                 "childrens_name",
                 )
-        obj.setEditorMode("web_plates_name", 1)
+        if not hasattr(obj, "side_plates_name"):
+            obj.addProperty(
+                "App::PropertyStringList",
+                "side_plates_name",
+                "childrens_name",
+                )
+        obj.setEditorMode("side_plates_name", 1)
 
         if not hasattr(obj, "connection_ipes_name"):
             obj.addProperty(
@@ -309,6 +315,8 @@ class ColumnType:
         merge_flang_levels = [simplify_levels[0]]
         merge_web_plates = []
         merge_web_levels = [simplify_levels[0]]
+        merge_side_plates = []
+        merge_side_levels = [simplify_levels[0]]
         souble_ipes = []
         souble_ipe_levels = [simplify_levels[0]]
 
@@ -346,6 +354,23 @@ class ColumnType:
             else:
                 merge_web_plates.append(web_plate)
                 merge_web_levels.append(level)
+            
+            
+            if side_plate:
+                extend_button_side_length = obj.extend_plate_len_above * scale
+            else:
+                extend_button_side_length = -obj.extend_plate_len_below * scale
+
+            level = simplify_levels[i + 1] + extend_button_side_length
+            if merge_side_plates:
+                if side_plate != merge_side_plates[-1]:
+                    merge_side_plates.append(side_plate)
+                    merge_side_levels.append(level)
+                else:
+                    merge_side_levels[-1] = level
+            else:
+                merge_side_plates.append(side_plate)
+                merge_side_levels.append(level)
 
             if obj.pa_baz:
                 if n == 3 or (i == len(simplify_sections_name) - 1):
@@ -514,6 +539,24 @@ class ColumnType:
                 PLATE.Height = h
                 PLATE.ViewObject.ShapeColor = (0.0, 1.0, 0.0)
                 web_plates_name.append(PLATE.Name)
+        side_plates_name = []
+        for i, plate in enumerate(merge_side_plates):
+            if plate:
+                width = plate[0]
+                height = plate[1]
+                x = ipe.Placement.Base.x + (tw + bf) / 2
+                plsr, _ = create_plate(height, width)
+                plsr.Placement.Base = FreeCAD.Vector(x, 0, merge_side_levels[i]) + obj.Placement.Base
+                plsl = plsr.copy(False)
+                plsl.Placement.Base = FreeCAD.Vector(-x, 0, merge_side_levels[i]) + obj.Placement.Base
+                palte_obj = FreeCAD.ActiveDocument.addObject("Part::FeaturePython", "side_Plate")
+                palte_obj.Shape = Part.makeCompound([plsr, plsl])
+                PLATE = Arch.makeStructure(palte_obj)
+                PLATE.IfcType = "Plate"
+                h = merge_side_levels[i + 1] - merge_side_levels[i]
+                PLATE.Height = h
+                PLATE.ViewObject.ShapeColor = (0.0, 1.0, 0.0)
+                side_plates_name.append(PLATE.Name)
 
         #  insert BASE PLATE
         h = .02 * scale
@@ -565,6 +608,7 @@ class ColumnType:
         obj.ipe_name = IPE.Name
         obj.flang_plates_name = flang_plates_name
         obj.web_plates_name = web_plates_name
+        obj.side_plates_name = side_plates_name
         obj.base_plate_name = [base_plate.Name]
         obj.connection_ipes_name = connection_ipes
         obj.neshimans_name = neshimans_name
@@ -573,7 +617,7 @@ class ColumnType:
         obj.sections_obj_name = sections_obj_name
         obj.front_draw_sources_name = front_draw_sources_name
 
-        childrens_name = [IPE.Name] + flang_plates_name + web_plates_name + nardebani_names + \
+        childrens_name = [IPE.Name] + flang_plates_name + web_plates_name + side_plates_name + nardebani_names + \
                         [base_plate.Name] + connection_ipes + neshimans_name + \
                         souble_ipes_name + sections_obj_name + front_draw_sources_name
         old_childrens_name = obj.childrens_name
@@ -654,10 +698,10 @@ class ViewProviderColumnType:
         return
 
     def __getstate__(self):
-    	return None
+        return None
 
     def __setstate__(self, state):
-    	return None
+        return None
 
 
 def make_column_type(
@@ -887,10 +931,10 @@ class Ui:
     def accept(self):
         self.save_config()
         self.add_column()
-        FreeCADGui.Control.closeDialog(self)
+        FreeCADGui.Control.closeDialog()
 
     def reject(self):
-        FreeCADGui.Control.closeDialog(self)
+        FreeCADGui.Control.closeDialog()
 
     def save_config(self):
         json_file = os.path.join(FreeCAD.getUserAppDataDir(), 'column.json')
@@ -1012,8 +1056,14 @@ def create_columns():
 
 
 if __name__ == '__main__':
-    create_columns()
-    # make_column_type([4, 3.2, 3.2, 3.2, 3.3, 5], ['2IPE30PL200x8w200x5', '2IPE30PL200x8w200x5', '2IPE30PL200x8','2IPE30PL200x8', '2IPE30w200x5', '2IPE30w200x5'], base_level=-1.2, pos=(0, 0), size="30")
+    # create_columns()
+    make_column_type(
+        [4, 3.2, 3.2, 3.2, 3.3, 5],
+        ['2IPE30FPL200x8WPL200x5SPL200X10', '2IPE30FPL200x8WPL200x5SPL200X10', '2IPE30FPL200x8','2IPE30FPL200x8', '2IPE30WPL200x5', '2IPE30WPL200x5'],
+        level_obj=-1.2,
+        size="30",
+        )
+
     # make_column_type([4, 3.2, 3.2, 3.2, 3.3, 5], ['2IPE24PL300x8w200x5', '2IPE24PL250x8w200x5', '2IPE24PL200x8','2IPE24PL200x8', '2IPE24w150x5', '2IPE24w150x5'], base_level=-1.2, pos=(2000, 0), size="24", pa_baz=True)
     # make_column_type([4, 3.2, 3.2, 3.2, 3.3, 5], ['2IPE24w200x5', '2IPE24PL250x8w200x5', '2IPE24PL200x8','2IPE24PL200x8', '2IPE24w150x5', '2IPE24w150x5'], base_level=-1.2, pos=(4000, 0), size="24", pa_baz=True)
     # make_column_type([4, 3.2, 3.2, 3.2, 3.3, 5], ['2IPE14', '2IPE14', '2IPE14', '2IPE14', '2IPE14', '2IPE14'], base_level=-1.2, pos=(6000, 0), size="14", pa_baz=True)
