@@ -1,13 +1,14 @@
-import PySide2
-from PySide2 import QtCore, QtGui
+from PySide2 import QtCore
 import FreeCAD
 import FreeCADGui
-import DraftTools
-import os
 import column_types
 import column_type
 import section
 import update
+
+from pathlib import Path
+
+steel_column_path = Path(__file__).parent
 
 
 def QT_TRANSLATE_NOOP(ctx, txt): return txt
@@ -31,12 +32,9 @@ class Dxf:
         ToolTip = QtCore.QT_TRANSLATE_NOOP(
             "Dxf",
             "Export to Dxf")
-        rel_path = "Mod/SteelColumn/Resources/icons/Dxf.svg"
-        path = FreeCAD.ConfigGet("AppHomePath") + rel_path
-        import os
-        if not os.path.exists(path):
-            path = FreeCAD.ConfigGet("UserAppData") + rel_path
-        return {'Pixmap': path,
+        
+        path = steel_column_path / 'Resources' / 'icons' / 'Dxf.svg'
+        return {'Pixmap': str(path),
                 'MenuText': MenuText,
                 'ToolTip': ToolTip}
 
@@ -49,12 +47,9 @@ class Levels:
         ToolTip = QtCore.QT_TRANSLATE_NOOP(
             "Levels",
             "Creates Levels")
-        rel_path = "Mod/SteelColumn/Resources/icons/Levels.svg"
-        path = FreeCAD.getHomePath() + rel_path
-        import os
-        if not os.path.exists(path):
-            path =  FreeCAD.getUserAppDataDir() + rel_path
-        return {'Pixmap': path,
+        
+        path = steel_column_path / 'Resources' / 'icons' / 'Levels.svg'
+        return {'Pixmap': str(path),
                 'MenuText': MenuText,
                 'ToolTip': ToolTip}
 
@@ -75,12 +70,9 @@ class Columns:
         ToolTip = QtCore.QT_TRANSLATE_NOOP(
             "Levels",
             "Creates Columns")
-        rel_path = "Mod/SteelColumn/Resources/icons/add.svg"
-        path = FreeCAD.getHomePath() + rel_path
-        import os
-        if not os.path.exists(path):
-            path =  FreeCAD.getUserAppDataDir() + rel_path
-        return {'Pixmap': path,
+        
+        path = steel_column_path / 'Resources' / 'icons' / 'add.svg'
+        return {'Pixmap': str(path),
                 'MenuText': MenuText,
                 'ToolTip': ToolTip}
 
@@ -100,12 +92,9 @@ class RemoveColumn:
         ToolTip = QtCore.QT_TRANSLATE_NOOP(
             "Levels",
             "Remove Columns")
-        rel_path = "Mod/SteelColumn/Resources/icons/remove.svg"
-        path = FreeCAD.getHomePath() + rel_path
-        import os
-        if not os.path.exists(path):
-            path =  FreeCAD.getUserAppDataDir() + rel_path
-        return {'Pixmap': path,
+        
+        path = steel_column_path / 'Resources' / 'icons' / 'remove.svg'
+        return {'Pixmap': str(path),
                 'MenuText': MenuText,
                 'ToolTip': ToolTip}
 
@@ -126,12 +115,9 @@ class Sections:
         ToolTip = QtCore.QT_TRANSLATE_NOOP(
             "Sections",
             "Creates Sections")
-        rel_path = "Mod/SteelColumn/Resources/icons/section.svg"
-        path = FreeCAD.getHomePath() + rel_path
-        import os
-        if not os.path.exists(path):
-            path =  FreeCAD.getUserAppDataDir() + rel_path
-        return {'Pixmap': path,
+        
+        path = steel_column_path / 'Resources' / 'icons' / 'section.svg'
+        return {'Pixmap': str(path),
                 'MenuText': MenuText,
                 'ToolTip': ToolTip}
 
@@ -152,12 +138,9 @@ class Update:
         ToolTip = QtCore.QT_TRANSLATE_NOOP(
             "Update",
             "Update Steel Column WorkBench")
-        rel_path = "Mod/SteelColumn/Resources/icons/update.png"
-        path = FreeCAD.getHomePath() + rel_path
-        import os
-        if not os.path.exists(path):
-            path =  FreeCAD.getUserAppDataDir() + rel_path
-        return {'Pixmap': path,
+        
+        path = steel_column_path / 'Resources' / 'icons' / 'update.png'
+        return {'Pixmap': str(path),
                 'MenuText': MenuText,
                 'ToolTip': ToolTip}
 
