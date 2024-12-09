@@ -26,8 +26,8 @@ class Dxf:
         return True if FreeCADGui.ActiveDocument else False
 
     def GetResources(self):
-        MenuText = QT_TRANSLATE_NOOP("Dxf", "Export to DXF")
-        ToolTip = QT_TRANSLATE_NOOP("Dxf", "Export to DXF")
+        MenuText = QT_TRANSLATE_NOOP("SteelColumn_ExportDxf", "Export to DXF")
+        ToolTip = QT_TRANSLATE_NOOP("SteelColumn_ExportDxf", "Export to DXF")
 
         path = steel_column_path / "Resources" / "icons" / "Dxf.svg"
         return {"Pixmap": str(path), "MenuText": MenuText, "ToolTip": ToolTip}
@@ -35,8 +35,8 @@ class Dxf:
 
 class Levels:
     def GetResources(self):
-        MenuText = QT_TRANSLATE_NOOP("Levels", "Creates Levels")
-        ToolTip = QT_TRANSLATE_NOOP("Levels", "Creates Levels")
+        MenuText = QT_TRANSLATE_NOOP("SteelColumn_CreateLevels", "Creates Levels")
+        ToolTip = QT_TRANSLATE_NOOP("SteelColumn_CreateLevels", "Creates Levels")
 
         path = steel_column_path / "Resources" / "icons" / "Levels.svg"
         return {"Pixmap": str(path), "MenuText": MenuText, "ToolTip": ToolTip}
@@ -50,8 +50,8 @@ class Levels:
 
 class Columns:
     def GetResources(self):
-        MenuText = QT_TRANSLATE_NOOP("Levels", "Creates Columns")
-        ToolTip = QT_TRANSLATE_NOOP("Levels", "Creates Columns")
+        MenuText = QT_TRANSLATE_NOOP("SteelColumn_CreateColumns", "Creates Columns")
+        ToolTip = QT_TRANSLATE_NOOP("SteelColumn_CreateColumns", "Creates Columns")
 
         path = steel_column_path / "Resources" / "icons" / "add.svg"
         return {"Pixmap": str(path), "MenuText": MenuText, "ToolTip": ToolTip}
@@ -65,8 +65,8 @@ class Columns:
 
 class RemoveColumn:
     def GetResources(self):
-        MenuText = QT_TRANSLATE_NOOP("Levels", "Remove Columns")
-        ToolTip = QT_TRANSLATE_NOOP("Levels", "Remove Columns")
+        MenuText = QT_TRANSLATE_NOOP("SteelColumn_RemoveColumns", "Remove Columns")
+        ToolTip = QT_TRANSLATE_NOOP("SteelColumn_RemoveColumns", "Remove Columns")
 
         path = steel_column_path / "Resources" / "icons" / "remove.svg"
         return {"Pixmap": str(path), "MenuText": MenuText, "ToolTip": ToolTip}
@@ -80,8 +80,8 @@ class RemoveColumn:
 
 class Sections:
     def GetResources(self):
-        MenuText = QT_TRANSLATE_NOOP("Sections", "Creates Sections")
-        ToolTip = QT_TRANSLATE_NOOP("Sections", "Creates Sections")
+        MenuText = QT_TRANSLATE_NOOP("SteelColumn_CreateSections", "Creates Sections")
+        ToolTip = QT_TRANSLATE_NOOP("SteelColumn_CreateSections", "Creates Sections")
 
         path = steel_column_path / "Resources" / "icons" / "section.svg"
         return {"Pixmap": str(path), "MenuText": MenuText, "ToolTip": ToolTip}
@@ -95,8 +95,8 @@ class Sections:
 
 class Update:
     def GetResources(self):
-        MenuText = QT_TRANSLATE_NOOP("Update", "Update")
-        ToolTip = QT_TRANSLATE_NOOP("Update", "Update Steel Column WorkBench")
+        MenuText = QT_TRANSLATE_NOOP("SteelColumn_UpdateWorkbench", "Update")
+        ToolTip = QT_TRANSLATE_NOOP("SteelColumn_UpdateWorkbench", "Update Steel Column WorkBench")
 
         path = steel_column_path / "Resources" / "icons" / "update.png"
         return {"Pixmap": str(path), "MenuText": MenuText, "ToolTip": ToolTip}
@@ -120,18 +120,18 @@ def get_save_filename(ext):
     return filename
 
 
-FreeCADGui.addCommand("steel_column_levels", Levels())
-FreeCADGui.addCommand("steel_column_section", Sections())
-FreeCADGui.addCommand("steel_column_columns", Columns())
-FreeCADGui.addCommand("steel_column_remove", RemoveColumn())
-FreeCADGui.addCommand("steel_column_dxf", Dxf())
-FreeCADGui.addCommand("steel_column_update", Update())
+FreeCADGui.addCommand("SteelColumn_CreateLevels", Levels())
+FreeCADGui.addCommand("SteelColumn_CreateSections", Sections())
+FreeCADGui.addCommand("SteelColumn_CreateColumns", Columns())
+FreeCADGui.addCommand("SteelColumn_RemoveColumns", RemoveColumn())
+FreeCADGui.addCommand("SteelColumn_ExportDxf", Dxf())
+FreeCADGui.addCommand("SteelColumn_UpdateWorkbench", Update())
 
 steel_column_commands = [
-    "steel_column_levels",
-    "steel_column_section",
-    "steel_column_columns",
-    "steel_column_remove",
-    "steel_column_dxf",
-    "steel_column_update",
+    "SteelColumn_CreateLevels",
+    "SteelColumn_CreateSections",
+    "SteelColumn_CreateColumns",
+    "SteelColumn_RemoveColumns",
+    "SteelColumn_ExportDxf",
+    "SteelColumn_UpdateWorkbench",
 ]
