@@ -1,4 +1,4 @@
-from PySide2 import QtCore
+from PySide import QtCore
 import FreeCAD
 import FreeCADGui
 import column_types
@@ -154,7 +154,7 @@ class Update:
 
 
 def get_save_filename(ext):
-    from PySide2.QtWidgets import QFileDialog
+    from PySide.QtWidgets import QFileDialog
     filters = f"{ext[1:]} (*{ext})"
     filename, _ = QFileDialog.getSaveFileName(None, 'select file',
                                               None, filters)

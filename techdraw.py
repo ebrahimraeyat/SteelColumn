@@ -247,7 +247,7 @@ def get_unique_edges(edges, ct, scale, ignore_len=False):
 	return unique_edges
 
 def get_save_filename(ext):
-    from PySide2.QtWidgets import QFileDialog
+    from PySide.QtWidgets import QFileDialog
     filters = f"{ext[1:]} (*{ext})"
     filename, _ = QFileDialog.getSaveFileName(None, 'select file',
                                               None, filters)

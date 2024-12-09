@@ -4,9 +4,9 @@ import Part
 import Arch
 import Draft
 
-from PySide2.QtWidgets import *
-from PySide2.QtCore import *
-from PySide2.QtGui import *
+from PySide.QtWidgets import *
+from PySide.QtCore import *
+from PySide.QtGui import *
 
 from FreeCAD import Base
 from section import make_section, create_ipe, create_plate, create_neshiman

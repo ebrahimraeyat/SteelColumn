@@ -14,7 +14,7 @@ class SteelColumnWorkbench(Workbench):
 		self.__class__.ToolTip = "SteelColumn Workbench"
 
 	def Initialize(self):
-		from PySide2 import QtCore
+		from PySide import QtCore
 		import SteelColumnGui
 		command_list = SteelColumnGui.steel_column_commands
 				
