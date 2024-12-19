@@ -7,9 +7,9 @@ import csv
 from os.path import join, dirname, abspath
 import os
 from columnTypeFunctions import *
-# from PySide2.QtWidgets import *
-# from PySide2.QtCore import *
-from PySide2.QtGui import *
+# from PySide.QtWidgets import *
+# from PySide.QtCore import *
+from PySide.QtGui import *
 import section_config as config
 
 

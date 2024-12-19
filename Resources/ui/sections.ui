@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <ui version="4.0">
- <class>Dialog</class>
- <widget class="QDialog" name="Dialog">
+ <class>Sections</class>
+ <widget class="QDialog" name="Sections">
   <property name="geometry">
    <rect>
     <x>0</x>
@@ -57,42 +57,42 @@
         <widget class="QComboBox" name="ipe_size">
          <item>
           <property name="text">
-           <string>14</string>
+           <string notr="true">14</string>
           </property>
          </item>
          <item>
           <property name="text">
-           <string>16</string>
+           <string notr="true">16</string>
           </property>
          </item>
          <item>
           <property name="text">
-           <string>18</string>
+           <string notr="true">18</string>
           </property>
          </item>
          <item>
           <property name="text">
-           <string>20</string>
+           <string notr="true">20</string>
           </property>
          </item>
          <item>
           <property name="text">
-           <string>22</string>
+           <string notr="true">22</string>
           </property>
          </item>
          <item>
           <property name="text">
-           <string>24</string>
+           <string notr="true">24</string>
           </property>
          </item>
          <item>
           <property name="text">
-           <string>27</string>
+           <string notr="true">27</string>
           </property>
          </item>
          <item>
           <property name="text">
-           <string>30</string>
+           <string notr="true">30</string>
           </property>
          </item>
         </widget>
@@ -101,12 +101,12 @@
         <widget class="QComboBox" name="number">
          <item>
           <property name="text">
-           <string>2</string>
+           <string notr="true">2</string>
           </property>
          </item>
          <item>
           <property name="text">
-           <string>3</string>
+           <string notr="true">3</string>
           </property>
          </item>
         </widget>
@@ -135,7 +135,7 @@
         <item row="0" column="1">
          <widget class="QSpinBox" name="bf">
           <property name="suffix">
-           <string> cm</string>
+           <string notr="true"> cm</string>
           </property>
           <property name="minimum">
            <number>5</number>
@@ -155,7 +155,7 @@
         <item row="1" column="1">
          <widget class="QSpinBox" name="tf">
           <property name="suffix">
-           <string> mm</string>
+           <string notr="true"> mm</string>
           </property>
           <property name="minimum">
            <number>2</number>
@@ -190,7 +190,7 @@
         <item row="0" column="1">
          <widget class="QSpinBox" name="bw">
           <property name="suffix">
-           <string> cm</string>
+           <string notr="true"> cm</string>
           </property>
           <property name="minimum">
            <number>5</number>
@@ -210,7 +210,7 @@
         <item row="1" column="1">
          <widget class="QSpinBox" name="tw">
           <property name="suffix">
-           <string> mm</string>
+           <string notr="true"> mm</string>
           </property>
           <property name="minimum">
            <number>2</number>
@@ -245,7 +245,7 @@
         <item row="0" column="1">
          <widget class="QSpinBox" name="bs">
           <property name="suffix">
-           <string> cm</string>
+           <string notr="true"> cm</string>
           </property>
           <property name="minimum">
            <number>5</number>
@@ -265,7 +265,7 @@
         <item row="1" column="1">
          <widget class="QSpinBox" name="ts">
           <property name="suffix">
-           <string> mm</string>
+           <string notr="true"> mm</string>
           </property>
           <property name="minimum">
            <number>2</number>

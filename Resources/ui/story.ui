@@ -65,7 +65,7 @@
        <item>
         <widget class="QDoubleSpinBox" name="height_spinbox">
          <property name="suffix">
-          <string> m</string>
+          <string notr="true"> m</string>
          </property>
          <property name="minimum">
           <double>0.500000000000000</double>
