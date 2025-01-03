@@ -1,6 +1,11 @@
-from PySide.QtCore import *
-from PySide.QtGui import *
-from PySide.QtWidgets import *
+try:
+    from PySide.QtWidgets import *
+    from PySide.QtCore import *
+    from PySide.QtGui import *
+except ImportError:
+    from PySide2.QtWidgets import *
+    from PySide2.QtCore import *
+    from PySide2.QtGui import *
 import os
 import FreeCAD
 

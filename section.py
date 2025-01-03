@@ -9,7 +9,11 @@ import os
 from columnTypeFunctions import *
 # from PySide.QtWidgets import *
 # from PySide.QtCore import *
-from PySide.QtGui import *
+try:
+    from PySide.QtGui import *
+except ImportError:
+    from PySide2.QtGui import *
+
 import section_config as config
 
 
