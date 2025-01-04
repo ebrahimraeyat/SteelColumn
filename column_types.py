@@ -5,9 +5,14 @@ import Draft
 import Part
 import ArchComponent
 
-from PySide.QtWidgets import *
-from PySide.QtCore import *
-from PySide.QtGui import *
+try:
+    from PySide.QtWidgets import *
+    from PySide.QtCore import *
+    from PySide.QtGui import *
+except ImportError:
+    from PySide2.QtWidgets import *
+    from PySide2.QtCore import *
+    from PySide2.QtGui import *
 import sys, os
 from os.path import join, dirname, abspath
 from column_type import make_column_type
